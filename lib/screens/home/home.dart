@@ -3,6 +3,10 @@
 import 'package:flutter/material.dart';
 import 'package:join_create_group_functionality/screens/deposit/deposit_page.dart';
 import 'package:join_create_group_functionality/screens/profile/profile_page.dart';
+import 'package:join_create_group_functionality/utils/loanmanagement/application.dart';
+import 'package:join_create_group_functionality/utils/loanmanagement/disbursal.dart';
+import 'package:join_create_group_functionality/utils/loanmanagement/evaluation.dart';
+import 'package:join_create_group_functionality/utils/loanmanagement/management.dart';
 import 'package:join_create_group_functionality/utils/my_buttons.dart';
 import 'package:join_create_group_functionality/utils/my_card.dart';
 import 'package:join_create_group_functionality/utils/my_list_tiles.dart';
@@ -149,9 +153,15 @@ class _HomePageState extends State<HomePage> {
                             buttonText: 'Transact',
                           ),
                         ),
-                        MyButtons(
-                          iconPath: 'images/cash-withdrawal.png',
-                          buttonText: 'WithDraw',
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).push(MaterialPageRoute(
+                                builder: (context) => LoanApplicationPage()));
+                          },
+                          child: MyButtons(
+                            iconPath: 'images/cash-withdrawal.png',
+                            buttonText: 'Apply',
+                          ),
                         ),
                         MyButtons(
                           iconPath: 'images/calculator.png',
