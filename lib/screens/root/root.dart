@@ -30,7 +30,8 @@ class _OurRootState extends State<OurRoot> {
     CurrentUser currentUser = Provider.of<CurrentUser>(context, listen: false);
     String returnString = await currentUser.onStartUp();
     if (returnString == 'success') {
-      if (currentUser.getCurrentUser.grouId != null) {
+      if (currentUser.getCurrentUser.groupId != null) {
+        print(currentUser);
         setState(() {
           authStatus = AuthStatus.inGroup;
         });
@@ -61,7 +62,7 @@ class _OurRootState extends State<OurRoot> {
         retVal = OurNoGroup();
         break;
       case AuthStatus.inGroup:
-        //take user to the home screen if they belong to a group.(decid if this is the best option before making it final)
+        //take user to the home screen if they belong to a group.(decide if this is the best option before making it final)
         retVal = HomePage();
         break;
     }

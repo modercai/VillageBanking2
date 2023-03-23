@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class LoanMonitoringPage extends StatelessWidget {
   final List<Loan> loans;
 
-  LoanMonitoringPage({Key? key, required this.loans})
+  const LoanMonitoringPage({Key? key, required this.loans})
       : super(
             key:
                 key); //changede this from @required to just required if any errors please check here.

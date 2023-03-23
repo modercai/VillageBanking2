@@ -8,12 +8,12 @@ class LoanDisbursalPage extends StatefulWidget {
 
   const LoanDisbursalPage(
       {Key? key,
-      required this.loanApplication}) //changed this from @required to just required if any errors please check here.
+      required this.loanApplication}) 
       : super(key: key);
 
   @override
   _LoanDisbursalPageState createState() => _LoanDisbursalPageState();
-}
+} 
 
 class _LoanDisbursalPageState extends State<LoanDisbursalPage> {
   @override

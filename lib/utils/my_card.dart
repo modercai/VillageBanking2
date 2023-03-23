@@ -1,16 +1,18 @@
-// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, prefer_interpolation_to_compose_strings
 
 import 'package:flutter/material.dart';
 
 class MyCard extends StatelessWidget {
-  final double balance;
-  final String GroupName;
-  final color;
+  final double groupBalance;
+  final double personalBalance;
+  final String groupName;
+  final color; 
 
   const MyCard({
     Key? key,
-    required this.balance,
-    required this.GroupName,
+    required this.groupBalance,
+    required this.groupName,
+    required this.personalBalance,
     required this.color,
   }) : super(key: key);
 
@@ -27,31 +29,36 @@ class MyCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              height: 10,
+              height: 5,
             ),
             Text(
-              'Balance',
-              style: TextStyle(color: Colors.white),
+              'Group Balance',
+              style: TextStyle(color: Colors.white,fontSize: 15),
+            ),
+            
+            Text(
+              'ZMW ' + groupBalance.toStringAsFixed(2),
+              style: TextStyle(color: Colors.white, fontSize: 25),
             ),
             SizedBox(
               height: 10,
             ),
-            Text(
-              'k' + balance.toString(),
-              style: TextStyle(color: Colors.white, fontSize: 28),
-            ),
-            SizedBox(
-              height: 30,
+            Text('Personal Balance',
+              style: TextStyle(color: Colors.white,fontSize: 15),),
+            Text('ZMW ' + personalBalance.toStringAsFixed(2),
+            style: TextStyle(color: Colors.white,fontSize: 25),),
+             SizedBox(
+              height: 10,
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'GroupName:',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(color: Colors.white,fontSize: 15),
                 ),
                 Text(
-                  GroupName,
+                  groupName,
                   style: TextStyle(color: Colors.white),
                 ),
               ],

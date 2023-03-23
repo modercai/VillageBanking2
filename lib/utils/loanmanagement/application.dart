@@ -1,29 +1,33 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+
+import '../../models/loanapplication.dart';
 
 class LoanApplicationPage extends StatefulWidget {
   @override
-  _LoanApplicationPageState createState() => _LoanApplicationPageState();
+  _LoanApplicationScreenState createState() => _LoanApplicationScreenState();
 }
 
-class _LoanApplicationPageState extends State<LoanApplicationPage> {
+class _LoanApplicationScreenState extends State<LoanApplicationPage> {
   final _formKey = GlobalKey<FormState>();
-  late String _borrowerName;
-  late double _loanAmount;
-  late String _loanPurpose;
+  final _borrowerNameController = TextEditingController();
+  final _loanAmountController = TextEditingController();
+  final _loanPurposeController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Loan Application'),
+        title: Text('Apply for Loan'),
       ),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
               TextFormField(
+                controller: _borrowerNameController,
                 decoration: InputDecoration(labelText: 'Borrower Name'),
                 validator: (value) {
                   if (value!.isEmpty) {
@@ -31,9 +35,9 @@ class _LoanApplicationPageState extends State<LoanApplicationPage> {
                   }
                   return null;
                 },
-                onSaved: (value) => _borrowerName = value!,
               ),
               TextFormField(
+                controller: _loanAmountController,
                 decoration: InputDecoration(labelText: 'Loan Amount'),
                 keyboardType: TextInputType.number,
                 validator: (value) {
@@ -42,9 +46,9 @@ class _LoanApplicationPageState extends State<LoanApplicationPage> {
                   }
                   return null;
                 },
-                onSaved: (value) => _loanAmount = double.parse(value!),
               ),
               TextFormField(
+                controller: _loanPurposeController,
                 decoration: InputDecoration(labelText: 'Loan Purpose'),
                 validator: (value) {
                   if (value!.isEmpty) {
@@ -52,13 +56,33 @@ class _LoanApplicationPageState extends State<LoanApplicationPage> {
                   }
                   return null;
                 },
-                onSaved: (value) => _loanPurpose = value!,
               ),
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
-                    _formKey.currentState!.save();
-                    // Submit the loan application to the server
+                    // Create a new loan application object from the form data
+                    final loanApplication = LoanApplication(
+                      borrowerName: _borrowerNameController.text,
+                      loanAmount: _loanAmountController.text,
+                      loanPurpose: _loanPurposeController.text,
+                      status: 'PENDING',
+                    );
+
+                    // Save the loan application to Firestore
+                    FirebaseFirestore.instance
+                        .collection('loan_applications')
+                        .add(loanApplication.toMap());
+
+                    // Clear the form fields
+                    _borrowerNameController.clear();
+                    _loanAmountController.clear();
+                    _loanPurposeController.clear();
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Loan application submitted'),
+                      ),
+                    );
                   }
                 },
                 child: Text('Submit'),

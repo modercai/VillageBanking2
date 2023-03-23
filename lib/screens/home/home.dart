@@ -1,12 +1,15 @@
 // ignore_for_file: use_build_context_synchronously, prefer_const_constructors, prefer_const_literals_to_create_immutables
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:join_create_group_functionality/models/group.dart';
 import 'package:join_create_group_functionality/screens/deposit/deposit_page.dart';
+import 'package:join_create_group_functionality/screens/deposit/new_deposit_page.dart';
 import 'package:join_create_group_functionality/screens/profile/profile_page.dart';
+import 'package:join_create_group_functionality/services/database.dart';
+import 'package:join_create_group_functionality/splashScreen/splash.dart';
 import 'package:join_create_group_functionality/utils/loanmanagement/application.dart';
-import 'package:join_create_group_functionality/utils/loanmanagement/disbursal.dart';
-import 'package:join_create_group_functionality/utils/loanmanagement/evaluation.dart';
-import 'package:join_create_group_functionality/utils/loanmanagement/management.dart';
 import 'package:join_create_group_functionality/utils/my_buttons.dart';
 import 'package:join_create_group_functionality/utils/my_card.dart';
 import 'package:join_create_group_functionality/utils/my_list_tiles.dart';
@@ -21,6 +24,14 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final controller = PageController();
+  final user = FirebaseAuth.instance.currentUser!;
+  
+  getGroupName()async{
+
+    String groupName = await OurDatabse().getGroupName();
+
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -106,20 +117,30 @@ class _HomePageState extends State<HomePage> {
                     controller: controller,
                     scrollDirection: Axis.horizontal,
                     children: [
-                      MyCard(
-                        balance: 200.256,
-                        GroupName: 'Fridays',
-                        color: Colors.deepPurple[300],
-                      ),
-                      MyCard(
-                        balance: 5075.56,
-                        GroupName: 'Malates',
-                        color: Colors.pink[300],
-                      ),
-                      MyCard(
-                        balance: 1056.23,
-                        GroupName: 'Kamulis',
-                        color: Colors.green[300],
+                      // Use StreamBuilder to get the balance data from Firebase
+
+                      StreamBuilder<DocumentSnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('transactions')
+                            .doc(user.uid)
+                            .snapshots(),
+                        builder: (BuildContext context,
+                            AsyncSnapshot<DocumentSnapshot> snapshot) {
+                          if (!snapshot.hasData) {
+                            return MyCard(
+                              groupBalance: 0.0,
+                              personalBalance: 0.0,
+                              groupName: '',
+                              color: Colors.deepPurple[300],
+                            );
+                          }
+                          return MyCard(
+                            groupBalance: snapshot.data!.get('amount'),
+                            personalBalance: 0.0,
+                            groupName: getGroupName().toString(),
+                            color: Colors.deepPurple[300],
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -145,7 +166,7 @@ class _HomePageState extends State<HomePage> {
                           onTap: (() {
                             Navigator.of(context).push(MaterialPageRoute(
                                 builder: (BuildContext context) {
-                              return CashDeposit();
+                              return OurDepositPage();
                             }));
                           }),
                           child: MyButtons(
@@ -163,9 +184,17 @@ class _HomePageState extends State<HomePage> {
                             buttonText: 'Apply',
                           ),
                         ),
-                        MyButtons(
-                          iconPath: 'images/calculator.png',
-                          buttonText: 'Calculator',
+                        GestureDetector(
+                          onTap: (() {
+                            Navigator.of(context).push(MaterialPageRoute(
+                                builder: (BuildContext context) {
+                              return SplashScreen();
+                            }));
+                          }),
+                          child: MyButtons(
+                            iconPath: 'images/calculator.png',
+                            buttonText: 'Calculator',
+                          ),
                         ),
                       ]),
                 ),
@@ -176,9 +205,6 @@ class _HomePageState extends State<HomePage> {
                     imagePath: 'images/pie-chart.png',
                     boldText: 'Statistics',
                     normalText: 'Transactions and Payments'),
-                SizedBox(
-                  height: 25,
-                ),
                 MyListTile(
                     imagePath: 'images/money-bag.png',
                     boldText: 'Transactions',
