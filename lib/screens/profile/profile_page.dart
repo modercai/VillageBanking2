@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:join_create_group_functionality/screens/noGroup/nogroup.dart';
 import 'package:join_create_group_functionality/screens/root/root.dart';
 import 'package:join_create_group_functionality/utils/loanmanagement/evaluation.dart';
+import 'package:join_create_group_functionality/utils/loanmanagement/repayment.dart';
+import 'package:join_create_group_functionality/utils/new_loan_repayment.dart';
 import 'package:join_create_group_functionality/utils/profile_list_item/profile_list_items.dart';
 import 'package:provider/provider.dart';
 
@@ -18,6 +20,14 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   final user = FirebaseAuth.instance.currentUser!;
+  Loan loan = Loan(
+  id: 'ABC123',
+  borrowerName: 'John Doe',
+  loanAmount: 1000.0,
+  loanPurpose: 'Business investment',
+  remainingAmount: 800.0,
+);
+
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +81,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     iconData: Icons.person_add, text: 'No Group Page'),
                 onTap: () {
                   Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => OurNoGroup()));
+                      MaterialPageRoute(builder: (context) => LoanPaymentForm()));
                 },
               ),
               SizedBox(

@@ -2,8 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:join_create_group_functionality/screens/home/home.dart';
+import 'package:join_create_group_functionality/states/current_user.dart';
 import 'package:join_create_group_functionality/utils/get_loan_details.dart';
-import 'package:join_create_group_functionality/utils/loan_history.dart';
+import 'package:provider/provider.dart';
 
 class LoanEvaluationPage extends StatefulWidget {
   @override
@@ -23,9 +24,11 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
   }
 
   void _loadLoanApplications() async {
+    CurrentUser currentUser = Provider.of<CurrentUser>(context,listen: false);
+    String? groupId = currentUser.getCurrentUser.groupId;
     // Get a reference to the loan applications collection in Firebase Firestore
     CollectionReference loanApplicationsRef =
-        FirebaseFirestore.instance.collection('loan_applications');
+        FirebaseFirestore.instance.collection('groups').doc(groupId).collection('loan_applications');
 
     // Load the loan applications from Firebase Firestore
     QuerySnapshot querySnapshot = await loanApplicationsRef.get();
@@ -34,7 +37,7 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
           .map((doc) => LoanApplication(
                 id: doc.id,
                 borrowerName: doc['borrowerName'],
-                loanAmount: (doc['loanAmount']),
+                loanAmount: (doc['loanAmount']).toDouble(),
                 loanPurpose: doc['loanPurpose'],
                 status: _getStatusFromString(doc['status']),
               ))
@@ -44,13 +47,21 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
 
 // Evaluate loan based on the criteria that the amount is less or equal to a certain amount(this criteria has to be changed though)
   void _evaluateLoan(LoanApplication loanApplication) async {
+
+    //get an instance of the user from the database
+
+    
+    CurrentUser currentUser = Provider.of<CurrentUser>(context,listen: false);
+    String? groupId = currentUser.getCurrentUser.groupId;
+
+
     // Get a reference to the loan application document in Firebase Firestore
-    DocumentReference loanApplicationRef = FirebaseFirestore.instance
-        .collection('loan_applications')
+    DocumentReference loanApplicationRef = FirebaseFirestore.instance.
+        collection('groups').doc(groupId).collection('loan_applications')
         .doc(loanApplication.id);
 
     // Convert the loan amount to a number
-    double loanAmount = double.parse(loanApplication.loanAmount!);
+    double loanAmount = loanApplication.loanAmount!;
 
     // Update the status of the loan application based on your evaluation criteria
     String status = loanAmount <= 5000 ? 'APPROVED' : 'DECLINED';
@@ -65,19 +76,19 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
     // Disburse the loan amount if it was approved
   if (status == 'APPROVED') {
     // Get a reference to the transaction document in Firebase Firestore
-    DocumentReference transactionRef = FirebaseFirestore.instance
-        .collection('transactions')
-        .doc(userId);
+    DocumentReference transactionRef = FirebaseFirestore.instance.collection('groups').doc(groupId)
+        .collection('user_transactions')
+        .doc('IJwbasJ5NCcizqKf6Jeu');
 
     // Get the user's current balance
     DocumentSnapshot userSnapshot = await transactionRef.get();
-    double currentBalance = userSnapshot['amount'];
+    double currentBalance = userSnapshot['user_balance'].toDouble();
 
     // Calculate the new balance after disbursement
-    double newBalance = currentBalance + loanAmount;
+    double newBalance =  currentBalance + loanAmount;
 
     // Update the user's balance in Firebase Firestore
-    await transactionRef.update({'amount': newBalance});
+    await transactionRef.update({'user_balance': newBalance});
   }
 
     // Reload the loan applications list to reflect the updated status
@@ -153,7 +164,7 @@ enum LoanApplicationStatus { PENDING, APPROVED, DECLINED }
 class LoanApplication {
   final String? id;
   final String? borrowerName;
-  final String? loanAmount;
+  final double? loanAmount;
   final String? loanPurpose;
   final LoanApplicationStatus? status;
 

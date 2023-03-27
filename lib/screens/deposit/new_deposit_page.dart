@@ -97,47 +97,49 @@ class _OurDepositPageState extends State<OurDepositPage> {
           });
     } else {
       final user = FirebaseAuth.instance.currentUser!;
-       // get an instance of the currentUser from firebase.
-       CurrentUser currentUser = Provider.of<CurrentUser>(context, listen: false);
-    String? groupId = currentUser.getCurrentUser.groupId;// get the state of the user and retrieve the group id from there.
-double amount = double.parse(textcontrollerAMOUNT) ;
-final userId = user.uid;
-String email = textcontrollerEMAIL;
-String description = _textcontrollerITEM.text;
-bool isIncome = _isIncome;
+      // get an instance of the currentUser from firebase.
+      CurrentUser currentUser =
+          Provider.of<CurrentUser>(context, listen: false);
+      String? groupId = currentUser.getCurrentUser
+          .groupId; // get the state of the user and retrieve the group id from there.
+      double amount = double.parse(textcontrollerAMOUNT);
+      final userId = user.uid;
+      String email = textcontrollerEMAIL;
+      String description = _textcontrollerITEM.text;
+      bool isIncome = _isIncome;
 
-FirebaseFirestore.instance
-  .collection('groups')
-  .doc(groupId)
-  .collection('transactions')
-  .doc(userId)
-  .get()
-  .then((documentSnapShot) {
-    if (documentSnapShot.exists) {
-      final currentAmount = documentSnapShot.data()!['amount']; 
-      final newAmount = currentAmount + amount;
       FirebaseFirestore.instance
-        .collection('groups')
-        .doc(groupId)
-        .collection('transactions')
-        .doc(userId)
-        .update({'amount': newAmount});
-    } else {
-      // Create a new document with the user ID and transaction amount
-      FirebaseFirestore.instance
-        .collection('groups')
-        .doc(groupId)
-        .collection('transactions')
-        .doc(userId)
-        .set({
-          'amount': amount,
-          'email': email,
-          'item': description,
-          'deposit': isIncome,
-          'timestamp': Timestamp.now(),
-        });
-    }
-});
+          .collection('groups')
+          .doc(groupId)
+          .collection('transactions')
+          .doc(userId)
+          .get()
+          .then((documentSnapShot) {
+        if (documentSnapShot.exists) {
+          final currentAmount = documentSnapShot.data()!['amount'];
+          final newAmount = currentAmount + amount;
+          FirebaseFirestore.instance
+              .collection('groups')
+              .doc(groupId)
+              .collection('transactions')
+              .doc(userId)
+              .update({'amount': newAmount});
+        } else {
+          // Create a new document with the user ID and transaction amount
+          FirebaseFirestore.instance
+              .collection('groups')
+              .doc(groupId)
+              .collection('transactions')
+              .doc(userId)
+              .set({
+            'amount': amount,
+            'email': email,
+            'item': description,
+            'deposit': isIncome,
+            'timestamp': Timestamp.now(),
+          });
+        }
+      });
 
       // Navigate to a new page to show the new balance
       Navigator.pushReplacementNamed(context, '/');
@@ -277,7 +279,7 @@ FirebaseFirestore.instance
                         handlePaymentInitialization(_textcontrollerAMOUNT.text,
                             _textcontrollerEMAIL.text);
                         // get form field values
-                        
+
                         //here put reload and take to a new page to show the new balance.
                       }
                     },

@@ -2,10 +2,9 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:join_create_group_functionality/models/users.dart';
-import 'package:join_create_group_functionality/models/group.dart';
 
 
-class OurDatabse {
+class OurDatabase {
   final FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
 
   Future<String> createUser(OurUser user) async {
@@ -62,7 +61,10 @@ class OurDatabse {
     return retVal;
   }
 
-  Future<String> createGroup(String groupName, String userUid) async {
+
+  
+
+  Future<String> createGroup(String groupName,String userUid) async {
     String retVal = 'error';
     List<String> members = [];
 
@@ -122,4 +124,47 @@ class OurDatabse {
 
     return retVal;
   }
+
+Future<void> calculateLoanRepayment(String groupId, String memberId, double paymentAmount) async {
+  // Step 1: Retrieve the interest rate and loan amount from the group's collection in Firebase
+  final groupRef = FirebaseFirestore.instance.collection('groups').doc(groupId);
+  final groupData = await groupRef.get();
+  final interestRate = groupData.get('interest_rate');
+
+  //get the loan amount from the loan applications collections 
+  final loanAmountRef = groupRef.collection('loan_applications').doc(memberId);
+  final loanAmountData = await loanAmountRef.get();
+  final loanAmount = loanAmountData.get('loanAmount');
+
+  // Step 2: Calculate the interest on the loan using the interest rate and loan amount
+  final interest = loanAmount * interestRate/100; 
+
+  // Step 3: Calculate the total amount due by adding the interest to the loan amount
+  final totalAmountDue = loanAmount + interest;
+
+  // Step 4: Retrieve the user's payment history from the "loan_payments" sub-collection
+  final memberRef = groupRef.collection('loan_payments').doc(memberId);
+  final paymentHistory = await memberRef.collection('payments').get();
+
+  // Step 5: Calculate the total amount paid by the user so far
+  double totalPaidAmount = 0;
+  for (final payment in paymentHistory.docs) {
+    totalPaidAmount += payment.get('payment_amount');
+  }
+
+  // Step 6: Calculate the remaining balance by subtracting the total amount paid from the total amount due
+  final remainingBalance = totalAmountDue - totalPaidAmount;
+
+  // Step 7: Update the "user_transactions" sub-collection with the remaining balance
+  await memberRef.update({'remaining_balance': remainingBalance});
+
+  // Step 8: Add the new payment to the user's payment history
+  await memberRef.collection('payments').add({
+    'payment_amount': paymentAmount,
+    'timestamp': DateTime.now(),
+  });
+}
+
+
+
 }

@@ -1,6 +1,6 @@
 class LoanApplication {
   String borrowerName;
-  String loanAmount;
+  double loanAmount;
   String loanPurpose;
   String status;
 

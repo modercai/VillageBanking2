@@ -16,7 +16,7 @@ class OurCreateGroup extends StatefulWidget {
 class _OurCreateGroupState extends State<OurCreateGroup> {
   void createGroup(BuildContext context, String groupName) async {
     CurrentUser currentUser = Provider.of<CurrentUser>(context, listen: false);
-    String returnString = await OurDatabse()
+    String returnString = await OurDatabase()
         .createGroup(groupName, currentUser.getCurrentUser.uid!);
     if (returnString == 'success') {
       // ignore: use_build_context_synchronously

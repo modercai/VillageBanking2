@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoanRepaymentPage extends StatefulWidget {
   final Loan loan;
+  final String groupId;
 
-  LoanRepaymentPage({Key? key, required this.loan})
-      : super(
-            key:
-                key); //changede this from @required to just required if any errors please check here.
+  LoanRepaymentPage({
+    Key? key,
+    required this.loan,
+    required this.groupId,
+  }) : super(key: key);
 
   @override
   _LoanRepaymentPageState createState() => _LoanRepaymentPageState();
@@ -15,6 +18,27 @@ class LoanRepaymentPage extends StatefulWidget {
 class _LoanRepaymentPageState extends State<LoanRepaymentPage> {
   final _formKey = GlobalKey<FormState>();
   late double _repaymentAmount;
+  late double _interestRate;
+
+  @override
+  void initState() {
+    super.initState();
+    // Retrieve interest rate for the group from Firebase
+    FirebaseFirestore.instance
+        .collection('groups')
+        .doc(widget.groupId)
+        .get()
+        .then((DocumentSnapshot documentSnapshot) {
+      if (documentSnapshot.exists) {
+        setState(() {
+          // _interestRate = documentSnapshot.data()!['interestRate'] as double;
+          // specify type of 'interestRate' property as double
+        });
+      } else {
+        print('Group does not exist');
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,8 +75,22 @@ class _LoanRepaymentPageState extends State<LoanRepaymentPage> {
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
                     _formKey.currentState!.save();
-                    // Submit loan repayment to the server
-                    // ...
+                    // Calculate total repayment amount
+                    double totalRepaymentAmount =
+                        _repaymentAmount * widget.loan.remainingAmount!;
+                    // Calculate interest
+                    double interest = widget.loan.loanAmount! * _interestRate;
+                    // Calculate new remaining amount
+                    double newRemainingAmount =
+                        widget.loan.remainingAmount! - _repaymentAmount;
+                    // Update remaining amount in Firebase
+                    FirebaseFirestore.instance
+                        .collection('groups')
+                        .doc(widget.groupId)
+                        .collection('borrowers')
+                        .doc(widget.loan.id)
+                        .update({'remainingAmount': newRemainingAmount});
+                    // Navigate back to loan details page
                     Navigator.pop(context);
                   }
                 },

@@ -1,13 +1,14 @@
 // ignore_for_file: use_build_context_synchronously, prefer_const_constructors, prefer_const_literals_to_create_immutables
 
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:join_create_group_functionality/models/group.dart';
 import 'package:join_create_group_functionality/screens/deposit/deposit_page.dart';
 import 'package:join_create_group_functionality/screens/deposit/new_deposit_page.dart';
+import 'package:join_create_group_functionality/screens/noGroup/nogroup.dart';
 import 'package:join_create_group_functionality/screens/profile/profile_page.dart';
-import 'package:join_create_group_functionality/services/database.dart';
 import 'package:join_create_group_functionality/splashScreen/splash.dart';
 import 'package:join_create_group_functionality/utils/loanmanagement/application.dart';
 import 'package:join_create_group_functionality/utils/my_buttons.dart';
@@ -26,11 +27,15 @@ class _HomePageState extends State<HomePage> {
   final controller = PageController();
   final user = FirebaseAuth.instance.currentUser!;
   
-  getGroupName()async{
-
-    String groupName = await OurDatabse().getGroupName();
-
+double _getTransactionsTotal(QuerySnapshot<Map<String, dynamic>> transactionsSnapshot) {
+  double total = 0.0;
+  final transactionsDocs = transactionsSnapshot.docs;
+  for (final transactionDoc in transactionsDocs) {
+    final amount = transactionDoc.get('amount');
+    total += amount;
   }
+  return total;
+}
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +108,9 @@ class _HomePageState extends State<HomePage> {
                         padding: EdgeInsets.all(4),
                         decoration: BoxDecoration(
                             shape: BoxShape.circle, color: Colors.grey[400]),
-                        child: Icon(Icons.add),
+                        child: GestureDetector(child: Icon(Icons.add),onTap: () {
+                          Navigator.of(context).push(MaterialPageRoute(builder: (context) => OurNoGroup()));
+                        },),
                       )
                     ],
                   ),
@@ -117,31 +124,39 @@ class _HomePageState extends State<HomePage> {
                     controller: controller,
                     scrollDirection: Axis.horizontal,
                     children: [
-                      // Use StreamBuilder to get the balance data from Firebase
-
-                      StreamBuilder<DocumentSnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('transactions')
-                            .doc(user.uid)
-                            .snapshots(),
-                        builder: (BuildContext context,
-                            AsyncSnapshot<DocumentSnapshot> snapshot) {
-                          if (!snapshot.hasData) {
-                            return MyCard(
-                              groupBalance: 0.0,
-                              personalBalance: 0.0,
-                              groupName: '',
-                              color: Colors.deepPurple[300],
-                            );
-                          }
-                          return MyCard(
-                            groupBalance: snapshot.data!.get('amount'),
-                            personalBalance: 0.0,
-                            groupName: getGroupName().toString(),
-                            color: Colors.deepPurple[300],
-                          );
-                        },
-                      ),
+                      Scaffold(body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+          .collection('groups')
+          .where('members', arrayContains: user.uid)
+          .snapshots(),
+        builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final groupDocs = snapshot.data!.docs;
+          return ListView.builder(
+            itemCount: groupDocs.length,
+            itemBuilder: (BuildContext context, int index) {
+              final groupDoc = groupDocs[index];
+              return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: groupDoc.reference
+                  .collection('transactions')
+                  .snapshots(),
+                builder: (BuildContext context, AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>> snapshot) {
+                  if (!snapshot.hasData) {
+                    return const SizedBox.shrink();
+                  }
+                  final transactionsSnapshot = snapshot.data!;
+                  final total = _getTransactionsTotal(transactionsSnapshot);
+                  return MyCard(balance: total, groupName: groupDoc.get('name'), personalBalance: 0.0);
+                    
+                },
+              );
+            },
+          );
+        },
+      ),
+    ),
                     ],
                   ),
                 ),

@@ -1,19 +1,18 @@
-// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, prefer_interpolation_to_compose_strings
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class MyCard extends StatelessWidget {
-  final double groupBalance;
+  final double balance;
   final double personalBalance;
   final String groupName;
-  final color; 
+  final Color color;
 
   const MyCard({
     Key? key,
-    required this.groupBalance,
+    required this.balance,
     required this.groupName,
     required this.personalBalance,
-    required this.color,
+    this.color = Colors.blue,
   }) : super(key: key);
 
   @override
@@ -22,44 +21,43 @@ class MyCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
         width: 300,
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-            color: color, borderRadius: BorderRadius.circular(16)),
+          color: color,
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              height: 5,
-            ),
-            Text(
+            const SizedBox(height: 5),
+            const Text(
               'Group Balance',
-              style: TextStyle(color: Colors.white,fontSize: 15),
+              style: TextStyle(color: Colors.white, fontSize: 15),
             ),
-            
             Text(
-              'ZMW ' + groupBalance.toStringAsFixed(2),
-              style: TextStyle(color: Colors.white, fontSize: 25),
+              'ZMW ${balance.toStringAsFixed(2)}',
+              style: const TextStyle(color: Colors.white, fontSize: 25),
             ),
-            SizedBox(
-              height: 10,
+            const SizedBox(height: 10),
+            const Text(
+              'Your Balance',
+              style: TextStyle(color: Colors.white, fontSize: 15),
             ),
-            Text('Personal Balance',
-              style: TextStyle(color: Colors.white,fontSize: 15),),
-            Text('ZMW ' + personalBalance.toStringAsFixed(2),
-            style: TextStyle(color: Colors.white,fontSize: 25),),
-             SizedBox(
-              height: 10,
+            Text(
+              'ZMW ${personalBalance.toStringAsFixed(2)}',
+              style: const TextStyle(color: Colors.white, fontSize: 25),
             ),
+            const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'GroupName:',
-                  style: TextStyle(color: Colors.white,fontSize: 15),
+                const Text(
+                  'Group Name:',
+                  style: TextStyle(color: Colors.white, fontSize: 15),
                 ),
                 Text(
                   groupName,
-                  style: TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.white),
                 ),
               ],
             ),

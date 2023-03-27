@@ -20,7 +20,7 @@ class CurrentUser extends ChangeNotifier {
       //try to find better code for this if the error persits!!!!!!!!!!!!!!
       User user = await auth.currentUser!;
       if (user != null) {
-        currentUser = await OurDatabse().getUserInfo(user.uid);
+        currentUser = await OurDatabase().getUserInfo(user.uid);
       }
       if (currentUser != null) {
         retVal = 'success';
@@ -55,7 +55,7 @@ class CurrentUser extends ChangeNotifier {
       user.uid = userCredential.user!.uid;
       user.email = userCredential.user!.email;
       user.fullName = fullName;
-      String retunString = await OurDatabse().createUser(user);
+      String retunString = await OurDatabase().createUser(user);
       if (retunString == 'success') {
         retVal = 'success';
       }
@@ -72,7 +72,7 @@ class CurrentUser extends ChangeNotifier {
       UserCredential _authResult = await auth.signInWithEmailAndPassword(
           email: email, password: password);
 
-      currentUser = await OurDatabse().getUserInfo(_authResult.user!.uid);
+      currentUser = await OurDatabase().getUserInfo(_authResult.user!.uid);
       if (currentUser != null) {
         retVal = 'success';
       }

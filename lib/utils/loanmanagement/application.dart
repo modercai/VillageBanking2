@@ -1,5 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:join_create_group_functionality/states/current_user.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/loanapplication.dart';
 
@@ -63,15 +66,20 @@ class _LoanApplicationScreenState extends State<LoanApplicationPage> {
                     // Create a new loan application object from the form data
                     final loanApplication = LoanApplication(
                       borrowerName: _borrowerNameController.text,
-                      loanAmount: _loanAmountController.text,
+                      loanAmount: double.parse(_loanAmountController.text),
                       loanPurpose: _loanPurposeController.text,
                       status: 'PENDING',
                     );
 
+                    final user = FirebaseAuth.instance.currentUser!;
+                    CurrentUser currentUser = Provider.of<CurrentUser>(context,listen: false);
+                    String? groupId = currentUser.getCurrentUser.groupId;
+                    final userId = user.uid;
+
                     // Save the loan application to Firestore
-                    FirebaseFirestore.instance
-                        .collection('loan_applications')
-                        .add(loanApplication.toMap());
+                    FirebaseFirestore.instance.collection('groups').doc(groupId)
+                        .collection('loan_applications').doc(userId)
+                        .set(loanApplication.toMap());
 
                     // Clear the form fields
                     _borrowerNameController.clear();
