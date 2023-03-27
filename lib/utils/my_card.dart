@@ -31,8 +31,8 @@ class MyCard extends StatelessWidget {
           children: [
             const SizedBox(height: 5),
             const Text(
-              'Group Balance',
-              style: TextStyle(color: Colors.white, fontSize: 15),
+              'Group balance',
+              style: TextStyle(color: Colors.white, fontSize: 20),
             ),
             Text(
               'ZMW ${balance.toStringAsFixed(2)}',
@@ -41,7 +41,7 @@ class MyCard extends StatelessWidget {
             const SizedBox(height: 10),
             const Text(
               'Your Balance',
-              style: TextStyle(color: Colors.white, fontSize: 15),
+              style: TextStyle(color: Colors.white, fontSize: 20),
             ),
             Text(
               'ZMW ${personalBalance.toStringAsFixed(2)}',
@@ -53,11 +53,11 @@ class MyCard extends StatelessWidget {
               children: [
                 const Text(
                   'Group Name:',
-                  style: TextStyle(color: Colors.white, fontSize: 15),
+                  style: TextStyle(color: Colors.white, fontSize: 20),
                 ),
                 Text(
                   groupName,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.black,fontSize: 25,fontWeight: FontWeight.bold,fontStyle: FontStyle.italic),
                 ),
               ],
             ),
