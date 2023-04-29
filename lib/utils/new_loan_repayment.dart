@@ -1,11 +1,19 @@
-// ignore_for_file: prefer_const_constructors
+// ignore_for_file: prefer_const_constructors, use_build_context_synchronously
 
+import 'dart:convert';
+import 'dart:io';
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutterwave_standard/core/flutterwave.dart';
+import 'package:flutterwave_standard/models/requests/customer.dart';
+import 'package:flutterwave_standard/models/requests/customizations.dart';
+import 'package:flutterwave_standard/models/responses/charge_response.dart';
 import 'package:join_create_group_functionality/services/database.dart';
 import 'package:join_create_group_functionality/states/current_user.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
 
 class LoanPaymentForm extends StatefulWidget {
   @override
@@ -15,42 +23,145 @@ class LoanPaymentForm extends StatefulWidget {
 class _LoanPaymentFormState extends State<LoanPaymentForm> {
   final _formKey = GlobalKey<FormState>();
   final _paymentAmountController = TextEditingController();
+  String? _ref;
+  bool _isLoading = false;
 
-  void _submitForm() async {
+  void setRef() {
+    Random random = Random();
+    int numbers = random.nextInt(2000);
+    if (Platform.isAndroid) {
+      setState(() {
+        _ref = "VillageBankingAndroid123$numbers";
+      });
+    } else {
+      setState(() {
+        _ref = "VillageBankingIOS123$numbers";
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    setRef();
+    super.initState();
+  }
+
+  void _submitForm(
+      String textcontrollerAMOUNT, String textcontrollerEMAIL) async {
     if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
       final payment_amount = double.parse(_paymentAmountController.text.trim());
 
       final user = FirebaseAuth.instance.currentUser!;
-      CurrentUser currentUser = Provider.of<CurrentUser>(context, listen: false);
+      CurrentUser currentUser =
+          Provider.of<CurrentUser>(context, listen: false);
       String? groupId = currentUser.getCurrentUser.groupId;
       final userId = user.uid;
 
       try {
-        // Add the loan payment document to the loan_payments collection
-        await FirebaseFirestore.instance.collection('groups').doc(groupId).collection('loan_payments').doc(userId).set({
-          'payment_amount': payment_amount,
-          'payment_date': Timestamp.now(),
-        });
+        // Initialize payment
+        final Customer customer = Customer(
+            name: "Flutterwave Developer",
+            phoneNumber: "0962604525",
+            //include phonenumber here!!!!
+            email: textcontrollerEMAIL);
+        final Flutterwave flutterwave = Flutterwave(
+            context: context,
+            publicKey: "FLWPUBK_TEST-14693cf2dbbeb37cdabafebf73023bce-X",
+            currency: "ZMW",
+            redirectUrl:
+                "https://developer.flutterwave.com/docs/collecting-payments/standard/",
+            txRef: _ref!,
+            amount: textcontrollerAMOUNT,
+            customer: customer,
+            paymentOptions: "card",
+            customization: Customization(title: "My Payment"),
+            isTestMode: true);
 
-        // Update the member's loan balance by subtracting the repayment amount from the current loan balance
-        /*final memberRef =
-            FirebaseFirestore.instance.collection('user_transactions').doc(userId);//members collection
-        final memberSnapshot = await memberRef.get();
-        final currentBalance = memberSnapshot.data()!['loan_balance'];*/
-        await OurDatabase().calculateLoanRepayment(groupId!, userId, payment_amount);
+        final ChargeResponse response = await flutterwave.charge();
+        if (response.status == 'transaction cancelled') {
+          print(response.status.toString());
+          // Show an error message
+          showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: Text('Message'),
+                  content: Text('transaction ${response.status}'),
+                  actions: <Widget>[
+                    MaterialButton(
+                      child: Text('OK'),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                    )
+                  ],
+                );
+              });
+        } else {
+          // Add the loan payment document to the loan_payments collection
 
-        await FirebaseFirestore.instance.collection('groups').doc(groupId).collection('transactions').doc(userId).update({
-          'amount': FieldValue.increment(payment_amount),
-        });
+          await FirebaseFirestore.instance
+              .collection('groups')
+              .doc(groupId)
+              .collection('loan_payments')
+              .doc(userId)
+              .set({
+            'payment_amount': payment_amount,
+            'payment_date': Timestamp.now(),
+          });
+          await OurDatabase().calculateLoanRepayment(
+              groupId!, userId, payment_amount, context);
 
-        // Show a success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Loan payment added successfully')),//add a dialog message and send user to the other page.
-        );
+          await FirebaseFirestore.instance
+              .collection('groups')
+              .doc(groupId)
+              .collection('total')
+              .doc('total')
+              .update({
+            'total': FieldValue.increment(payment_amount),
+          });
+
+          // Show a success message
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: Text('Loan payment added successfully'),
+                actions: <Widget>[
+                  TextButton(
+                    child: Text('OK'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      setState(() {
+                        _isLoading = false;
+                      });
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+        }
       } catch (e) {
         // Show an error message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding loan payment: $e')),// do the same here
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Error adding Loan Payment: $e'),
+              actions: <Widget>[
+                TextButton(
+                  child: Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
         );
       }
     }
@@ -59,34 +170,50 @@ class _LoanPaymentFormState extends State<LoanPaymentForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Add Loan Payment')),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: EdgeInsets.all(16),
-          children: [
-            TextFormField(
-              controller: _paymentAmountController,
-              decoration: InputDecoration(labelText: 'Payment Amount'),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value!.isEmpty) {
-                  return 'Please enter a payment amount';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter a valid payment amount';
-                }
-                return null;
-              },
-            ),
-            SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: _submitForm,
-              child: Text('Add Loan Payment'),
-            ),
-          ],
+        backgroundColor: Colors.grey[200],
+        appBar: AppBar(
+          title: Text('Add Loan Payment'),
+          backgroundColor: Colors.deepPurple[200],
         ),
-      ),
-    );
+        body: Stack(
+          children: [
+            Form(
+              key: _formKey,
+              child: ListView(
+                padding: EdgeInsets.all(16),
+                children: [
+                  TextFormField(
+                    controller: _paymentAmountController,
+                    decoration: InputDecoration(labelText: 'Payment Amount'),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value!.isEmpty) {
+                        return 'Please enter a payment amount';
+                      }
+                      if (double.tryParse(value) == null) {
+                        return 'Please enter a valid payment amount';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 32),
+                  ElevatedButton(
+                    onPressed: _isLoading
+                    ? null
+                    :() async {
+                      _submitForm(_paymentAmountController.text,
+                          "malatefriday12@gmail.com");
+                    },
+                    child: Text('Add Loan Payment'),
+                  ),
+                ],
+              ),
+            ),
+            Visibility(
+          visible: _isLoading,
+          child: Center(
+            child: CircularProgressIndicator(),
+        ))],
+        ));
   }
 }

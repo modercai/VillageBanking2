@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, sort_child_properties_last
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -20,11 +22,13 @@ class _LoanApplicationScreenState extends State<LoanApplicationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[200],
       appBar: AppBar(
+        backgroundColor: Colors.deepPurple[200],
         title: Text('Apply for Loan'),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Form(
           key: _formKey,
           child: Column(
@@ -60,6 +64,9 @@ class _LoanApplicationScreenState extends State<LoanApplicationPage> {
                   return null;
                 },
               ),
+              SizedBox(
+                height: 20,
+              ),
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
@@ -80,6 +87,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationPage> {
                     FirebaseFirestore.instance.collection('groups').doc(groupId)
                         .collection('loan_applications').doc(userId)
                         .set(loanApplication.toMap());
+  
 
                     // Clear the form fields
                     _borrowerNameController.clear();
@@ -94,6 +102,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationPage> {
                   }
                 },
                 child: Text('Submit'),
+                style: ButtonStyle(backgroundColor: MaterialStateProperty.all<Color>(Colors.blue),),
               ),
             ],
           ),

@@ -40,7 +40,7 @@ class MySecondCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              'Last Paid Amount',
+              'Loan Amount',
               style: TextStyle(color: Colors.white, fontSize: 15),
             ),
             Text(

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({Key? key}) : super(key: key);
+  
   _ForgotPasswordPageState createState() => _ForgotPasswordPageState();
 }
 
@@ -30,12 +31,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             );
           });
     } on FirebaseAuthException catch (e) {
-      print(e);
       showDialog(
           context: context,
           builder: (context) {
             return AlertDialog(
-              content: Text(e.message.toString()),
+              content: Text('Please Enter Email Address'),
             );
           });
     }

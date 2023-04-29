@@ -31,7 +31,7 @@ class _LoanRepaymentPageState extends State<LoanRepaymentPage> {
         .then((DocumentSnapshot documentSnapshot) {
       if (documentSnapshot.exists) {
         setState(() {
-          // _interestRate = documentSnapshot.data()!['interestRate'] as double;
+           _interestRate = documentSnapshot['interestRate'] as double;
           // specify type of 'interestRate' property as double
         });
       } else {
@@ -89,7 +89,7 @@ class _LoanRepaymentPageState extends State<LoanRepaymentPage> {
                         .doc(widget.groupId)
                         .collection('borrowers')
                         .doc(widget.loan.id)
-                        .update({'remainingAmount': newRemainingAmount});
+                        .set({'remainingAmount': newRemainingAmount});
                     // Navigate back to loan details page
                     Navigator.pop(context);
                   }

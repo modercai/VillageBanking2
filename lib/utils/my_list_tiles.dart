@@ -26,7 +26,7 @@ class MyListTile extends StatelessWidget {
                     decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16)),
-                    height: 90,
+                    height: 75,
                     child: Image.asset(imagePath)),
                 Column(
                   mainAxisAlignment: MainAxisAlignment.start,

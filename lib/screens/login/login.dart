@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_const_literals_to_create_immutables, prefer_const_constructors
 
 import 'package:flutter/material.dart';
+import 'package:join_create_group_functionality/screens/forgotpassword/forgot_password.dart';
 import 'package:join_create_group_functionality/screens/home/home.dart';
 import 'package:join_create_group_functionality/screens/root/root.dart';
 import 'package:join_create_group_functionality/states/current_user.dart';
@@ -27,6 +28,9 @@ class _OurLoginState extends State<OurLogin> {
   final _emailController = TextEditingController();
 
   final _passwordController = TextEditingController();
+
+  bool _isLoading = false;
+  
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +113,9 @@ class _OurLoginState extends State<OurLogin> {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       GestureDetector(
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.of(context).push(MaterialPageRoute(builder: (context) =>ForgotPasswordPage()));
+                        },
                         child: Text(
                           'forgot password?',
                           style: TextStyle(
@@ -126,27 +132,34 @@ class _OurLoginState extends State<OurLogin> {
                 //signinn button
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 25),
-                  child: GestureDetector(
-                    onTap: () {
-                      logInUser(LoginType.email, _emailController.text,
-                          _passwordController.text, context);
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                          color: Colors.deepPurple,
-                          borderRadius: BorderRadius.circular(16)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(15),
-                        child: Center(
-                          child: Text(
-                            'Sign In',
-                            style: TextStyle(fontSize: 20, color: Colors.white),
+                  child:  
+                      GestureDetector(
+                        onTap: () {
+                          _logInUser(LoginType.email, _emailController.text,
+                              _passwordController.text, context);
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                              color: Colors.deepPurple,
+                              borderRadius: BorderRadius.circular(16)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(15),
+                            child: _isLoading
+              ? CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ):
+                            Center(
+                              child: Text(
+                                'Sign In',
+                                style: TextStyle(fontSize: 20, color: Colors.white),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                  
                   ),
-                ),
+                
                 SizedBox(
                   height: 20,
                 ),
@@ -171,13 +184,13 @@ class _OurLoginState extends State<OurLogin> {
                 SizedBox(
                   height: 20,
                 ),
-
+/*
                 //google signIn button
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 21.0),
                   child: GestureDetector(
                     onTap: () {
-                      logInUser(
+                      _logInUser(
                         LoginType.google,
                         "",
                         "",
@@ -222,8 +235,7 @@ class _OurLoginState extends State<OurLogin> {
                   ),
                 ),
                 SizedBox(
-                  height: 20,
-                ),
+                  height: 20,*/
               ],
             ),
           ),
@@ -231,11 +243,30 @@ class _OurLoginState extends State<OurLogin> {
       ),
     );
   }
-}
 
-void logInUser(
+
+void _logInUser(
     LoginType type, String email, String password, BuildContext context) async {
   CurrentUser currentUser = Provider.of<CurrentUser>(context, listen: false);
+
+    if (email.isEmpty) {
+    _showErrorDialog(context, 'Please enter your email.');
+    return;
+  }
+
+  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+    _showErrorDialog(context, 'Please enter a valid email address.');
+    return;
+  }
+
+  if (password.isEmpty) {
+    _showErrorDialog(context, 'Please enter a password.');
+    return;
+  }
+
+  setState(() {
+      _isLoading = true;
+    });
 
   try {
     String returnString;
@@ -256,10 +287,32 @@ void logInUser(
       showDialog(
           context: context,
           builder: (context) => AlertDialog(
-                content: Text('Login failed'),
+                content: Text('An error occurred while logging in. Enter correct login credentials or check connectivity.'),
               ));
     }
   } catch (e) {
-    print(e);
+    _showErrorDialog(context, e.toString());
   }
+  setState(() {
+      _isLoading = false;
+    });
+ 
+}
+
+void _showErrorDialog(BuildContext context, String message) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      content: Text(message),
+      actions: [
+        TextButton(
+          child: Text('OK'),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
+      ],
+    ),
+  );
+}
 }

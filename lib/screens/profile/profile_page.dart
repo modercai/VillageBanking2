@@ -1,7 +1,7 @@
 // ignore_for_file: use_build_context_synchronously, prefer_const_constructors
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:join_create_group_functionality/screens/noGroup/nogroup.dart';
+import 'package:join_create_group_functionality/screens/profile/members/members.dart';
 import 'package:join_create_group_functionality/screens/root/root.dart';
 import 'package:join_create_group_functionality/utils/loanmanagement/evaluation.dart';
 import 'package:join_create_group_functionality/utils/loanmanagement/repayment.dart';
@@ -32,6 +32,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[200],
       body: Center(
           child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -76,14 +77,15 @@ class _SettingsPageState extends State<SettingsPage> {
               SizedBox(
                 height: 10,
               ),
-              GestureDetector(
-                child: ProfileListItem(
-                    iconData: Icons.person_add, text: 'No Group Page'),
-                onTap: () {
-                  Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => LoanPaymentForm()));
-                },
-              ),
+              
+                 GestureDetector(
+                   child: ProfileListItem(
+                      iconData: Icons.people, text: 'Group Members'),
+                      onTap: () {
+                        Navigator.of(context).push(MaterialPageRoute(builder: (context) => Members()));
+                      },
+                 ),
+              
               SizedBox(
                 height: 10,
               ),

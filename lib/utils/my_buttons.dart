@@ -12,13 +12,13 @@ class MyButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(children: [
       Container(
-        height: 90,
+        height: 80,
         padding: EdgeInsets.all(10),
         decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             color: Colors.white,
             boxShadow: [
-              BoxShadow(blurRadius: 30, color: Colors.white, spreadRadius: 10)
+              BoxShadow(blurRadius: 50, color: Colors.white, spreadRadius: 10)
             ]),
         child: Center(
           child: Image.asset(iconPath),
@@ -27,7 +27,7 @@ class MyButtons extends StatelessWidget {
       SizedBox(height: 10),
       Text(
         buttonText,
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
       ),
     ]);
   }

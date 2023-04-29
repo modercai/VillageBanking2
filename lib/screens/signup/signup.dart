@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:join_create_group_functionality/screens/home/home.dart';
+import 'package:join_create_group_functionality/screens/root/root.dart';
 import 'package:join_create_group_functionality/states/current_user.dart';
 import 'package:provider/provider.dart';
 
@@ -22,6 +23,7 @@ class _OurRegisterPageState extends State<OurRegisterPage> {
   final _passwordController = TextEditingController();
   final _emailController = TextEditingController();
   final _fullNameController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -164,7 +166,11 @@ class _OurRegisterPageState extends State<OurRegisterPage> {
                           borderRadius: BorderRadius.circular(16)),
                       child: Padding(
                         padding: const EdgeInsets.all(15),
-                        child: Center(
+                        child:_isLoading
+              ? CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ):
+                         Center(
                           child: Text(
                             'Sign Up',
                             style: TextStyle(fontSize: 20, color: Colors.white),
@@ -177,7 +183,6 @@ class _OurRegisterPageState extends State<OurRegisterPage> {
                 SizedBox(
                   height: 20,
                 ),
-
                 //not a member? register now
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -203,25 +208,74 @@ class _OurRegisterPageState extends State<OurRegisterPage> {
     );
   }
 
-  void _signUpUser(String email, String password, String fullName,
-      BuildContext context) async {
-    CurrentUser currentUser = Provider.of<CurrentUser>(context, listen: false);
+void _signUpUser(String email, String password, String fullName, BuildContext context) async {
+  CurrentUser currentUser = Provider.of<CurrentUser>(context, listen: false);
 
-    try {
-      String returnString =
-          await currentUser.sigUpUser(email, password, fullName);
-      if (returnString == 'success') {
-        Navigator.of(context)
-            .push(MaterialPageRoute(builder: (context) => HomePage()));
-      } else {
-        showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-                  content: Text('SignUp Error!'),
-                ));
-      }
-    } catch (e) {
-      print(e);
-    }
+  // Validate input fields
+  if (fullName.isEmpty) {
+    _showErrorDialog(context, 'Please enter your full name.');
+    return;
   }
+
+  if (email.isEmpty) {
+    _showErrorDialog(context, 'Please enter your email.');
+    return;
+  }
+
+  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+    _showErrorDialog(context, 'Please enter a valid email address.');
+    return;
+  }
+
+  if (password.isEmpty) {
+    _showErrorDialog(context, 'Please enter a password.');
+    return;
+  }
+
+  if (password.length < 6) {
+    _showErrorDialog(context, 'Password must be at least 6 characters long.');
+    return;
+  }
+
+  if (password != _confirmPasswordController.text) {
+    _showErrorDialog(context, 'Passwords do not match.');
+    return;
+  }
+
+  setState(() {
+      _isLoading = true;
+    });
+
+  try {
+    String returnString = await currentUser.sigUpUser(email, password, fullName);
+    if (returnString == 'success') {
+      Navigator.of(context).push(MaterialPageRoute(builder: (context) => OurRoot()));
+    } else {
+      _showErrorDialog(context, 'An error occurred while registering. Please try again later.');
+    }
+  } catch (e) {
+    _showErrorDialog(context, e.toString());
+  }
+   setState(() {
+      _isLoading = false;
+    });
+}
+
+void _showErrorDialog(BuildContext context, String message) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      content: Text(message),
+      actions: [
+        TextButton(
+          child: Text('OK'),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
+      ],
+    ),
+  );
+}
+
 }

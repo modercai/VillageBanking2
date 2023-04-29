@@ -1,7 +1,10 @@
 // ignore_for_file: empty_catches
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:join_create_group_functionality/models/users.dart';
+import 'package:join_create_group_functionality/screens/createGroup/create_group.dart';
+
 
 
 class OurDatabase {
@@ -23,14 +26,6 @@ class OurDatabase {
 
     return retVal;
   }
-
-  /*Future<String> applyForLoan(Loan loan) async {
-    String retVal = 'error';
-
-    try {
-      await firebaseFirestore.collection('users').doc()
-    } catch (e) {}
-  }*/
 
   Future<OurUser> getUserInfo(String uid) async {
     OurUser retVal = OurUser();
@@ -64,7 +59,7 @@ class OurDatabase {
 
   
 
-  Future<String> createGroup(String groupName,String userUid) async {
+  Future<String> createGroup(String groupName,String userUid, int interestRate, Timestamp cycleStartDate) async {
     String retVal = 'error';
     List<String> members = [];
 
@@ -74,8 +69,10 @@ class OurDatabase {
           await firebaseFirestore.collection('groups').add({
         'name': groupName,
         'leader': userUid,
+        'interestRate':interestRate,
         'members': members,
         'groupCreated': Timestamp.now(),
+        'cycleStartDate':cycleStartDate,
       });
 
       await firebaseFirestore.collection('users').doc(userUid).update({
@@ -102,7 +99,6 @@ class OurDatabase {
     // for this example, we'll just print the new balance
     print('New balance for $userId: \$$newBalance');
   }
-  //
 
   Future<String> joinGroup(String groupId, String userUid) async {
     String retVal = 'error';
@@ -124,12 +120,12 @@ class OurDatabase {
 
     return retVal;
   }
-
-Future<void> calculateLoanRepayment(String groupId, String memberId, double paymentAmount) async {
+  
+Future<void> calculateLoanRepayment(String groupId, String memberId, double paymentAmount,context) async {
   // Step 1: Retrieve the interest rate and loan amount from the group's collection in Firebase
   final groupRef = FirebaseFirestore.instance.collection('groups').doc(groupId);
   final groupData = await groupRef.get();
-  final interestRate = groupData.get('interest_rate');
+  final interestRate = groupData.get('interestRate');
 
   //get the loan amount from the loan applications collections 
   final loanAmountRef = groupRef.collection('loan_applications').doc(memberId);
@@ -155,10 +151,29 @@ Future<void> calculateLoanRepayment(String groupId, String memberId, double paym
   // Step 6: Calculate the remaining balance by subtracting the total amount paid from the total amount due
   final remainingBalance = totalAmountDue - totalPaidAmount;
 
+  // Step 7: Check if the remaining balance is greater than zero
+ if (remainingBalance <= 0) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Error"),
+        content: Text("You cannot make any more payments until the remaining balance is replenished. Apply for another Loan Please"),
+        actions: <Widget>[
+          TextButton(
+            child: Text("OK"),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      ),
+    );
+    return;
+  }else{
   // Step 7: Update the "user_transactions" sub-collection with the remaining balance
-  await memberRef.update({'remaining_balance': remainingBalance});
+  await memberRef.update({'remaining_balance': remainingBalance,
+  'loan_amount':loanAmount});
+  }
 
-  // Step 8: Add the new payment to the user's payment history
+  // Step 9: Add the new payment to the user's payment history
   await memberRef.collection('payments').add({
     'payment_amount': paymentAmount,
     'timestamp': DateTime.now(),
@@ -166,5 +181,63 @@ Future<void> calculateLoanRepayment(String groupId, String memberId, double paym
 }
 
 
-
+Future<void> updateGroupTotalOnceLoanApproved(DocumentReference groupRef, double loanAmount,String groupId) async {
+  try {
+    // Get the current total from Firestore
+    final totalDoc = await groupRef.collection('groups').doc(groupId).collection('total').doc('total').get();
+    double currentTotal = totalDoc.get('total') ?? 0.0; // Handle the null case
+    
+    // Update the total by subtracting the loan amount
+    double total = currentTotal - loanAmount;
+    
+    // Update the total in Firestore
+    await groupRef.collection('total').doc('total').update({'total': total});
+  } catch (e) {
+    print('Failed to update group total: $e');
+  }
 }
+
+
+
+Future<List<Map<String, dynamic>>> getPaymentHistory(String groupId,) async {
+  final groupDoc = FirebaseFirestore.instance.collection('groups').doc(groupId);
+  final loanPaymentsQuery = groupDoc.collection('loan_payments');
+
+  final loanPaymentsSnapshot = await loanPaymentsQuery.get();
+  final paymentHistory = <Map<String, dynamic>>[];
+
+  for (final loanPaymentDoc in loanPaymentsSnapshot.docs) {
+    final paymentsQuery = loanPaymentDoc.reference.collection('payments');
+    final paymentsSnapshot = await paymentsQuery.get();
+
+    for (final paymentDoc in paymentsSnapshot.docs) {
+      final paymentData = paymentDoc.data();
+      paymentData['loanPaymentId'] = loanPaymentDoc.id;
+      paymentData['groupId'] = groupId;
+      paymentHistory.add(paymentData);
+    }
+  }
+
+  return paymentHistory;
+}
+
+
+Future<List<Map<String, dynamic>>> getApplicationHistory(String groupId) async {
+  final groupDoc = FirebaseFirestore.instance.collection('groups').doc(groupId);
+  final loanPaymentsQuery = groupDoc.collection('loan_applications');
+
+  final loanPaymentsSnapshot = await loanPaymentsQuery.get();
+  final paymentHistory = <Map<String, dynamic>>[];
+
+    for (final paymentDoc in loanPaymentsSnapshot.docs) {
+      final paymentData = paymentDoc.data();
+      paymentData['loanPaymentId'] = loanPaymentsQuery.id;
+      paymentData['groupId'] = groupId;
+      paymentHistory.add(paymentData);
+    }
+     return paymentHistory;
+  }
+
+ 
+}
+

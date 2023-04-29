@@ -1,5 +1,4 @@
 // ignore_for_file: prefer_const_literals_to_create_immutables, prefer_const_constructors, avoid_unnecessary_containers, use_build_context_synchronously
-
 import 'dart:convert';
 import 'dart:convert';
 import 'dart:io';
@@ -23,6 +22,7 @@ class OurDepositPage extends StatefulWidget {
 
 class _OurDepositPageState extends State<OurDepositPage> {
   String? _ref;
+  bool _isLoading = false;
 
   void setRef() {
     Random random = Random();
@@ -71,7 +71,7 @@ class _OurDepositPageState extends State<OurDepositPage> {
         txRef: _ref!,
         amount: textcontrollerAMOUNT,
         customer: customer,
-        paymentOptions: "ussd, card",
+        paymentOptions: "card",
         customization: Customization(title: "My Payment"),
         isTestMode: true);
 
@@ -141,6 +141,36 @@ class _OurDepositPageState extends State<OurDepositPage> {
         }
       });
 
+      FirebaseFirestore.instance
+          .collection('groups')
+          .doc(groupId)
+          .collection('total')
+          .doc('total')
+          .get()
+          .then((documentSnapShot) {
+        if (documentSnapShot.exists) {
+          final currentAmount = documentSnapShot.data()!['total'];
+          final newAmount = currentAmount + amount;
+          FirebaseFirestore.instance
+              .collection('groups')
+              .doc(groupId)
+              .collection('total')
+              .doc('total')
+              .update({'total': newAmount});
+        } else {
+          // Create a new document with the user ID and transaction amount
+          FirebaseFirestore.instance
+              .collection('groups')
+              .doc(groupId)
+              .collection('total')
+              .doc('total')
+              .set({
+            'total': amount,
+          });
+        }
+      });
+
+     
       // Navigate to a new page to show the new balance
       Navigator.pushReplacementNamed(context, '/');
 
@@ -178,21 +208,6 @@ class _OurDepositPageState extends State<OurDepositPage> {
                 content: SingleChildScrollView(
                   child: Column(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          Text('Deposit'),
-                          Switch(
-                            value: _isIncome,
-                            onChanged: (newValue) {
-                              setState(() {
-                                _isIncome = newValue;
-                              });
-                            },
-                          ),
-                          Text('Withdraw'),
-                        ],
-                      ),
                       SizedBox(
                         height: 5,
                       ),
@@ -294,7 +309,11 @@ class _OurDepositPageState extends State<OurDepositPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.deepPurple[200],
+      backgroundColor: Colors.grey[200],
+      appBar: AppBar(
+        backgroundColor: Colors.deepPurple[200],
+        title: Text('Make Transaction'),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 25),
@@ -302,13 +321,6 @@ class _OurDepositPageState extends State<OurDepositPage> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  Text(
-                    'Make Transactions',
-                    style: TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
-                  ),
                   SizedBox(
                     height: 50,
                   ),
@@ -345,17 +357,12 @@ class _OurDepositPageState extends State<OurDepositPage> {
                   SizedBox(
                     height: 170,
                   ),
-                  Container(
-                      padding: EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          color: Colors.deepPurple[100]),
-                      child: TextButton(
+                 ElevatedButton(
                           onPressed: _newTransaction,
                           child: Text(
-                            'Deposit&WithDraw',
+                            'Deposit',
                             style: TextStyle(color: Colors.white, fontSize: 20),
-                          )))
+                          ),),
                 ],
               ),
             ),

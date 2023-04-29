@@ -8,7 +8,7 @@ class LoanApplication {
       {required this.borrowerName,
       required this.loanAmount,
       required this.loanPurpose,
-      required this.status});
+      required this.status,});
 
   Map<String, dynamic> toMap() {
     return {

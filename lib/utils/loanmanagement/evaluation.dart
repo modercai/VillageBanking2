@@ -1,7 +1,10 @@
+// ignore_for_file: prefer_const_constructors, use_build_context_synchronously
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:join_create_group_functionality/screens/home/home.dart';
+import 'package:join_create_group_functionality/services/database.dart';
 import 'package:join_create_group_functionality/states/current_user.dart';
 import 'package:join_create_group_functionality/utils/get_loan_details.dart';
 import 'package:provider/provider.dart';
@@ -13,9 +16,8 @@ class LoanEvaluationPage extends StatefulWidget {
 
 class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
   List<LoanApplication>? _loanApplications;
-  bool isClickable = true;
   bool _isEvaluated = false;
-
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -24,11 +26,13 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
   }
 
   void _loadLoanApplications() async {
-    CurrentUser currentUser = Provider.of<CurrentUser>(context,listen: false);
+    CurrentUser currentUser = Provider.of<CurrentUser>(context, listen: false);
     String? groupId = currentUser.getCurrentUser.groupId;
     // Get a reference to the loan applications collection in Firebase Firestore
-    CollectionReference loanApplicationsRef =
-        FirebaseFirestore.instance.collection('groups').doc(groupId).collection('loan_applications');
+    CollectionReference loanApplicationsRef = FirebaseFirestore.instance
+        .collection('groups')
+        .doc(groupId)
+        .collection('loan_applications');
 
     // Load the loan applications from Firebase Firestore
     QuerySnapshot querySnapshot = await loanApplicationsRef.get();
@@ -45,54 +49,160 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
     });
   }
 
-// Evaluate loan based on the criteria that the amount is less or equal to a certain amount(this criteria has to be changed though)
   void _evaluateLoan(LoanApplication loanApplication) async {
+    setState(() {
+      _isLoading = true; // <-- set isLoading to true
+    });
 
-    //get an instance of the user from the database
+    // Check if the loan status is "PENDING"
+    if (loanApplication.status == LoanApplicationStatus.PENDING) {
+      //get an instance of the user from the database
+      CurrentUser currentUser =
+          Provider.of<CurrentUser>(context, listen: false);
+      String? groupId = currentUser.getCurrentUser.groupId;
 
-    
-    CurrentUser currentUser = Provider.of<CurrentUser>(context,listen: false);
-    String? groupId = currentUser.getCurrentUser.groupId;
+      // Get a reference to the loan application document in Firebase Firestore
+      DocumentReference loanApplicationRef = FirebaseFirestore.instance
+          .collection('groups')
+          .doc(groupId)
+          .collection('loan_applications')
+          .doc(loanApplication.id);
+
+      // Convert the loan amount to a number
+      double loanAmount = loanApplication.loanAmount!;
+
+      // Get a reference to the transaction document in Firebase Firestore
+      DocumentReference totalTransactionRef = FirebaseFirestore.instance
+          .collection('groups')
+          .doc(groupId)
+          .collection('total')
+          .doc('total');
+
+      // Get the user's current balance
+      DocumentSnapshot userSnapshot = await totalTransactionRef.get();
+      double currentTotalBalance = userSnapshot['total']?.toDouble() ?? 0;
+
+      // Check if the current balance is greater than or equal to the loan amount
+      if (currentTotalBalance >= loanAmount) {
+        // Update the status of the loan application based on your evaluation criteria
+        String status = loanAmount <= 5000 ? 'APPROVED' : 'DECLINED';
+
+        // Update the loan application document in Firebase Firestore with the new status
+        await loanApplicationRef.update({'status': status});
+
+        // Disburse the loan amount if it was approved
+
+        if (status == 'APPROVED') {
+
+          setState(() {
+      _isLoading = false; // <-- set isLoading to true
+    });
+          // Subtract the loan amount from the current balance to get the new balance
+          double newTotalBalance = currentTotalBalance - loanAmount;
+
+          // Update the transaction document in Firebase Firestore with the new balance
+          await totalTransactionRef.update({'total': newTotalBalance});
+          // Get a reference to the transaction document in Firebase Firestore
+          DocumentReference transactionRef = FirebaseFirestore.instance
+              .collection('groups')
+              .doc(groupId)
+              .collection('user_transactions')
+              .doc(currentUser.getCurrentUser.uid);
+
+          // Get the user's current balance
+          DocumentSnapshot userSnapshot = await transactionRef.get();
+          if (userSnapshot.exists) {
+            double currentBalance = userSnapshot['user_balance'].toDouble();
+
+            // Calculate the new balance after disbursement
+            double newBalance = currentBalance + loanAmount;
+
+            // Update the user's balance in Firebase Firestore
+            await transactionRef.update({'user_balance': newBalance});
+          } else {
+            double currentBalance = 0.0;
+            await transactionRef.set({'user_balance': currentBalance});
+          }
+          //set the loan Amount in loan_payments collection
+//set the loan Amount in loan_payments collection
+          DocumentReference loanPaymentRef = FirebaseFirestore.instance
+              .collection('loan_payments')
+              .doc(currentUser.getCurrentUser.uid);
+          await loanPaymentRef.set({'loan_amount': loanAmount});
 
 
-    // Get a reference to the loan application document in Firebase Firestore
-    DocumentReference loanApplicationRef = FirebaseFirestore.instance.
-        collection('groups').doc(groupId).collection('loan_applications')
-        .doc(loanApplication.id);
+          //initilize new loan payment when the status of the loan is approved
 
-    // Convert the loan amount to a number
-    double loanAmount = loanApplication.loanAmount!;
+          
+          // Step 1: Retrieve the interest rate and loan amount from the group's collection in Firebase
+  final groupRef = FirebaseFirestore.instance.collection('groups').doc(groupId);
+  final groupData = await groupRef.get();
+  final interestRate = groupData.get('interestRate');
 
-    // Update the status of the loan application based on your evaluation criteria
-    String status = loanAmount <= 5000 ? 'APPROVED' : 'DECLINED';
+  //get the loan amount from the loan applications collections 
+  final loanAmountRef = groupRef.collection('loan_applications').doc(currentUser.getCurrentUser.uid);
+  final loanAmountData = await loanAmountRef.get();
+  final evaLoanAmount = loanAmountData.get('loanAmount');
 
-    // Update the loan application document in Firebase Firestore with the new status
-    await loanApplicationRef.update({'status': status});
+  // Step 2: Calculate the interest on the loan using the interest rate and loan amount
+  final interest = evaLoanAmount * interestRate/100; 
 
-    //get an instance of the current user from the database
-    final user = FirebaseAuth.instance.currentUser!;
-    final userId = user.uid;
+  // Step 3: Calculate the total amount due by adding the interest to the loan amount
+  final totalAmountDue = loanAmount + interest;
 
-    // Disburse the loan amount if it was approved
-  if (status == 'APPROVED') {
-    // Get a reference to the transaction document in Firebase Firestore
-    DocumentReference transactionRef = FirebaseFirestore.instance.collection('groups').doc(groupId)
-        .collection('user_transactions')
-        .doc('IJwbasJ5NCcizqKf6Jeu');
+  // Step 4: Retrieve the user's payment history from the "loan_payments" sub-collection
+  final memberRef = groupRef.collection('loan_payments').doc(currentUser.getCurrentUser.uid);
 
-    // Get the user's current balance
-    DocumentSnapshot userSnapshot = await transactionRef.get();
-    double currentBalance = userSnapshot['user_balance'].toDouble();
+ 
+  // Step 7: Update the "user_transactions" sub-collection with the remaining balance
+  await memberRef.update({'remaining_balance': totalAmountDue,
+  'loan_amount':loanAmount});
+  
+           
 
-    // Calculate the new balance after disbursement
-    double newBalance =  currentBalance + loanAmount;
-
-    // Update the user's balance in Firebase Firestore
-    await transactionRef.update({'user_balance': newBalance});
-  }
-
-    // Reload the loan applications list to reflect the updated status
-    _loadLoanApplications();
+          // Reload the loan applications list to reflect the updated status
+          _loadLoanApplications();
+          setState(() {
+            _isLoading = false; // <-- set isLoading to false
+          });
+        }
+      } else {
+        // Show an error message to the user
+        showDialog(
+            context: context,
+            builder: (BuildContext) {
+              return AlertDialog(
+                title: Text('Insufficient Group Balance'),
+                content: Text(
+                    'Sorry, you do not have enough funds in your Group account to approve this loan.'),
+                actions: <Widget>[
+                  TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: Text('OK'))
+                ],
+              );
+            });
+      }
+    } else {
+      showDialog(
+          context: context,
+          builder: (BuildContext) {
+            return AlertDialog(
+              title: Text('Loan Evaluation'),
+              content: Text(
+                  'Loan is Either Approved or Declined check status and tell user to apply again'),
+              actions: <Widget>[
+                TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Text('OK'))
+              ],
+            );
+          });
+    }
   }
 
   LoanApplicationStatus _getStatusFromString(String statusString) {
@@ -109,40 +219,45 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[200],
       appBar: AppBar(
+        backgroundColor: Colors.deepPurple[200],
         title: Text('Loan Evaluation'),
       ),
-      body: _loanApplications == null
-          ? Center(child: CircularProgressIndicator())
-          : FutureBuilder(
-              builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
-              return ListView.builder(
-                itemCount: _loanApplications?.length,
-                itemBuilder: (context, index) {
-                  LoanApplication loanApplication = _loanApplications![index];
-                  return ListTile(
-                    title: GetLoanDetails(
-                      documentId: loanApplication.id!,
-                    ),
-                    subtitle: Text(loanApplication.loanPurpose!),
-                    trailing:
-                        _buildLoanApplicationStatus(loanApplication.status!),
-                    onTap: () {
-                      if(!isClickable){   
-                        return;
-                      }
-                      isClickable = false;
-                      if(!_isEvaluated){
-                        _isEvaluated = true;
-                        Navigator.push(context, MaterialPageRoute(builder: (context)=> HomePage()));
-                      }
-                      //evaluate the loan applications
-                      _evaluateLoan(loanApplication);
+      body: Stack(
+        children: [
+          _loanApplications == null
+              ? Center(child: CircularProgressIndicator())
+              : FutureBuilder(builder:
+                  (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+                  return ListView.builder(
+                    itemCount: _loanApplications?.length,
+                    itemBuilder: (context, index) {
+                      LoanApplication loanApplication =
+                          _loanApplications![index];
+                      return ListTile(
+                          title: GetLoanDetails(
+                            documentId: loanApplication.id!,
+                          ),
+                          subtitle: Text(loanApplication.loanPurpose!),
+                          trailing: _buildLoanApplicationStatus(
+                              loanApplication.status!),
+                          onTap: () {
+                            _evaluateLoan(loanApplication);
+                          }
+
+                          //evaluate the loan applications
+
+                          );
                     },
                   );
-                },
-              );
-            }),
+                }),
+          if (_isLoading)
+            Center(
+              child: CircularProgressIndicator(),
+            ),
+        ],
+      ),
     );
   }
 

@@ -14,20 +14,21 @@ class OurJoinGroup extends StatefulWidget {
 }
 
 class _OurJoinGroupState extends State<OurJoinGroup> {
-  void joinGroup(BuildContext context, String groupId) async {
-    CurrentUser currentUser = Provider.of<CurrentUser>(context, listen: false);
-    String returnString =
-        await OurDatabase().joinGroup(groupId, currentUser.getCurrentUser.uid!);
-    if (returnString == 'success') {
-      // ignore: use_build_context_synchronously
-      Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(
-            builder: (context) => OurRoot(),
-          ),
-          (route) => false);
-    }
-  }
+ void joinGroup(BuildContext context, String groupId) async {
+  CurrentUser? currentUser = Provider.of<CurrentUser>(context, listen: false);
+  if (currentUser != null && currentUser.getCurrentUser != null) {
+    String? uid = currentUser.getCurrentUser.uid;
+      if (uid != null) {
+        String returnString = await OurDatabase().joinGroup(groupId, uid);
+        if (returnString == 'success') {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => OurRoot()),
+            (route) => false,
+          );
+        }
+      }}
+}
 
   final joinGroupController = TextEditingController();
 
