@@ -26,6 +26,7 @@ class _LoanPaymentFormState extends State<LoanPaymentForm> {
   String? _ref;
   bool _isLoading = false;
 
+
   void setRef() {
     Random random = Random();
     int numbers = random.nextInt(2000);
@@ -45,6 +46,14 @@ class _LoanPaymentFormState extends State<LoanPaymentForm> {
     setRef();
     super.initState();
   }
+
+    @override
+  void dispose() {
+    _paymentAmountController.dispose();
+    // Cancel any active work here
+    super.dispose();
+  }
+
 
   void _submitForm(
       String textcontrollerAMOUNT, String textcontrollerEMAIL) async {
@@ -81,7 +90,7 @@ class _LoanPaymentFormState extends State<LoanPaymentForm> {
             isTestMode: true);
 
         final ChargeResponse response = await flutterwave.charge();
-        if (response.status == 'transaction cancelled') {
+        if (response.status == 'cancelled') {
           print(response.status.toString());
           // Show an error message
           showDialog(
@@ -100,10 +109,17 @@ class _LoanPaymentFormState extends State<LoanPaymentForm> {
                   ],
                 );
               });
+              setState(() {
+                _isLoading = false;
+              });
         } else {
-          // Add the loan payment document to the loan_payments collection
+          //calculate loan repayments and update the database
 
-          await FirebaseFirestore.instance
+          await OurDatabase().calculateLoanRepayment(
+              groupId!, userId, payment_amount, context);
+
+          // Add the loan payment document to the loan_payments collection
+         /* await FirebaseFirestore.instance
               .collection('groups')
               .doc(groupId)
               .collection('loan_payments')
@@ -111,9 +127,7 @@ class _LoanPaymentFormState extends State<LoanPaymentForm> {
               .set({
             'payment_amount': payment_amount,
             'payment_date': Timestamp.now(),
-          });
-          await OurDatabase().calculateLoanRepayment(
-              groupId!, userId, payment_amount, context);
+          });*/
 
           await FirebaseFirestore.instance
               .collection('groups')
@@ -151,7 +165,7 @@ class _LoanPaymentFormState extends State<LoanPaymentForm> {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: Text('Error adding Loan Payment: $e'),
+              title: Text('Error adding Loan Payment: ''please check connectivity or report problem'),
               actions: <Widget>[
                 TextButton(
                   child: Text('OK'),
@@ -202,7 +216,7 @@ class _LoanPaymentFormState extends State<LoanPaymentForm> {
                     ? null
                     :() async {
                       _submitForm(_paymentAmountController.text,
-                          "malatefriday12@gmail.com");
+                          "testmode@email.com");
                     },
                     child: Text('Add Loan Payment'),
                   ),

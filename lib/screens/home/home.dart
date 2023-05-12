@@ -11,6 +11,7 @@ import 'package:join_create_group_functionality/screens/deposit/new_deposit_page
 import 'package:join_create_group_functionality/screens/noGroup/nogroup.dart';
 import 'package:join_create_group_functionality/screens/payment_history/tabbed_appbar/history_appbar.dart';
 import 'package:join_create_group_functionality/screens/profile/profile_page.dart';
+import 'package:join_create_group_functionality/screens/statistics/stats.dart';
 import 'package:join_create_group_functionality/screens/withdraw/withdraw.dart';
 import 'package:join_create_group_functionality/services/database.dart';
 import 'package:join_create_group_functionality/splashScreen/splash.dart';
@@ -49,8 +50,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
+    return Scaffold(
         floatingActionButton: FloatingActionButton(
           onPressed: () {
             Navigator.of(context)
@@ -396,12 +396,12 @@ class _HomePageState extends State<HomePage> {
                           onTap: (() {
                             Navigator.of(context).push(MaterialPageRoute(
                                 builder: (BuildContext context) {
-                              return Withdraw();
+                              return TransferForm();
                             }));
                           }),
                           child: MyButtons(
                             iconPath: 'images/withdraw.png',
-                            buttonText: 'payout',
+                            buttonText: 'WithDraw',
                           ),
                         ),
                       ]),
@@ -409,10 +409,18 @@ class _HomePageState extends State<HomePage> {
                 SizedBox(
                   height: 25,
                 ),
-                MyListTile(
-                    imagePath: 'images/pie-chart.png',
-                    boldText: 'statistics',
-                    normalText: 'transactions and payments'),
+                GestureDetector(
+                  onTap: () {
+                     CurrentUser currentUser =
+                    Provider.of<CurrentUser>(context, listen: false);
+                    String? groupId = currentUser.getCurrentUser.groupId;
+                    Navigator.of(context).push(MaterialPageRoute(builder: (context) => PaymentHistoryReport(groupId: groupId!)));
+                  },
+                  child: MyListTile(
+                      imagePath: 'images/pie-chart.png',
+                      boldText: 'statistics',
+                      normalText: 'transactions and payments'),
+                ),
                 GestureDetector(
                   onTap: () {
                     Navigator.of(context).push(MaterialPageRoute(
@@ -427,7 +435,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ),
-      ),
-    );
+      );
+    
   }
 }

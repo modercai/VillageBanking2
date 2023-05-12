@@ -48,11 +48,18 @@ class _PaymentHistoryScreenState extends State<ApplicationHistoryScreen> {
               final paymentData = paymentHistory[index];
               final paymentAmount = paymentData['loanAmount'] as num;
               final paymentTimestamp = paymentData['loanPurpose'] as String;
+              final paymentBorroweName = paymentData['borrowerName'] as String;
               
 
               return ListTile(
-                title: Text('Amount  ZMW ${paymentAmount.toStringAsFixed(2)}'),
-                subtitle: Text('Purpose => '+ paymentTimestamp),
+                title: Row(
+                  children: [
+                    Text('Amount  ZMW ${paymentAmount.toStringAsFixed(2)}'),
+                    SizedBox(width: 20,),
+                    Text('Name:  $paymentBorroweName'),
+                  ],
+                ),
+                subtitle: Text('Purpose:  $paymentTimestamp',),
               );
             },
           );

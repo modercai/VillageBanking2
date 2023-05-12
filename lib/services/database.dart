@@ -1,11 +1,8 @@
-// ignore_for_file: empty_catches
+// ignore_for_file: empty_catches, prefer_const_constructors
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:join_create_group_functionality/models/users.dart';
-import 'package:join_create_group_functionality/screens/createGroup/create_group.dart';
-
-
 
 class OurDatabase {
   final FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
@@ -56,8 +53,6 @@ class OurDatabase {
     return retVal;
   }
 
-
-  
 
   Future<String> createGroup(String groupName,String userUid, int interestRate, Timestamp cycleStartDate) async {
     String retVal = 'error';
@@ -128,9 +123,9 @@ Future<void> calculateLoanRepayment(String groupId, String memberId, double paym
   final interestRate = groupData.get('interestRate');
 
   //get the loan amount from the loan applications collections 
-  final loanAmountRef = groupRef.collection('loan_applications').doc(memberId);
+  final loanAmountRef = groupRef.collection('loan_payments').doc(memberId);
   final loanAmountData = await loanAmountRef.get();
-  final loanAmount = loanAmountData.get('loanAmount');
+  final loanAmount = loanAmountData.get('loan_amount');
 
   // Step 2: Calculate the interest on the loan using the interest rate and loan amount
   final interest = loanAmount * interestRate/100; 
@@ -142,14 +137,18 @@ Future<void> calculateLoanRepayment(String groupId, String memberId, double paym
   final memberRef = groupRef.collection('loan_payments').doc(memberId);
   final paymentHistory = await memberRef.collection('payments').get();
 
-  // Step 5: Calculate the total amount paid by the user so far
+  // Step 5: Calculate the amount paid by the user so far
   double totalPaidAmount = 0;
   for (final payment in paymentHistory.docs) {
     totalPaidAmount += payment.get('payment_amount');
   }
+  print('Total paid amount: $totalPaidAmount');
+  // Step 5: Retrieve the latest payment and calculate the amount paid by the user so far
 
   // Step 6: Calculate the remaining balance by subtracting the total amount paid from the total amount due
   final remainingBalance = totalAmountDue - totalPaidAmount;
+  print('Remaining balance: $remainingBalance');
+  print('PaymentAmount:$paymentAmount');
 
   // Step 7: Check if the remaining balance is greater than zero
  if (remainingBalance <= 0) {
@@ -169,15 +168,16 @@ Future<void> calculateLoanRepayment(String groupId, String memberId, double paym
     return;
   }else{
   // Step 7: Update the "user_transactions" sub-collection with the remaining balance
-  await memberRef.update({'remaining_balance': remainingBalance,
-  'loan_amount':loanAmount});
-  }
+  await memberRef.update({'remaining_balance': remainingBalance,'loan_amount':loanAmount},);
 
   // Step 9: Add the new payment to the user's payment history
   await memberRef.collection('payments').add({
     'payment_amount': paymentAmount,
     'timestamp': DateTime.now(),
   });
+  }
+
+  
 }
 
 
@@ -196,7 +196,6 @@ Future<void> updateGroupTotalOnceLoanApproved(DocumentReference groupRef, double
     print('Failed to update group total: $e');
   }
 }
-
 
 
 Future<List<Map<String, dynamic>>> getPaymentHistory(String groupId,) async {
@@ -222,21 +221,21 @@ Future<List<Map<String, dynamic>>> getPaymentHistory(String groupId,) async {
 }
 
 
-Future<List<Map<String, dynamic>>> getApplicationHistory(String groupId) async {
-  final groupDoc = FirebaseFirestore.instance.collection('groups').doc(groupId);
-  final loanPaymentsQuery = groupDoc.collection('loan_applications');
+  Future<List<Map<String, dynamic>>> getApplicationHistory(String groupId) async {
+    final groupDoc = FirebaseFirestore.instance.collection('groups').doc(groupId);
+    final loanPaymentsQuery = groupDoc.collection('loan_applications');
 
-  final loanPaymentsSnapshot = await loanPaymentsQuery.get();
-  final paymentHistory = <Map<String, dynamic>>[];
+    final loanPaymentsSnapshot = await loanPaymentsQuery.get();
+    final paymentHistory = <Map<String, dynamic>>[];
 
-    for (final paymentDoc in loanPaymentsSnapshot.docs) {
-      final paymentData = paymentDoc.data();
-      paymentData['loanPaymentId'] = loanPaymentsQuery.id;
-      paymentData['groupId'] = groupId;
-      paymentHistory.add(paymentData);
+      for (final paymentDoc in loanPaymentsSnapshot.docs) {
+        final paymentData = paymentDoc.data();
+        paymentData['loanPaymentId'] = loanPaymentsQuery.id;
+        paymentData['groupId'] = groupId;
+        paymentHistory.add(paymentData);
+      }
+      return paymentHistory;
     }
-     return paymentHistory;
-  }
 
  
 }

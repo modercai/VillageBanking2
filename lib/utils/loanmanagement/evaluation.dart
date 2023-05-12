@@ -1,10 +1,9 @@
 // ignore_for_file: prefer_const_constructors, use_build_context_synchronously
 
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:join_create_group_functionality/screens/home/home.dart';
-import 'package:join_create_group_functionality/services/database.dart';
 import 'package:join_create_group_functionality/states/current_user.dart';
 import 'package:join_create_group_functionality/utils/get_loan_details.dart';
 import 'package:provider/provider.dart';
@@ -23,6 +22,11 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
   void initState() {
     super.initState();
     _loadLoanApplications();
+  }
+  
+  //push notification for when the loan is approved
+  void loanApprovedNotification() async {
+    await AwesomeNotifications().createNotification(content: NotificationContent(id: 1, channelKey: 'key1',title: 'Loan Evaluation',body: 'Your Loan has been approved succesfully check your balance to comfirm'),);
   }
 
   void _loadLoanApplications() async {
@@ -54,12 +58,31 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
       _isLoading = true; // <-- set isLoading to true
     });
 
+     //get an instance of the user from the database
+  CurrentUser currentUser = Provider.of<CurrentUser>(context, listen: false);
+  String? groupId = currentUser.getCurrentUser.groupId;
+  final user = FirebaseAuth.instance.currentUser;
+  final userId = user!.uid;
+
+
+  // Check if the current user is the leader of the group
+  bool isLeader = false;
+  DocumentSnapshot groupSnapshot = await FirebaseFirestore.instance
+      .collection('groups')
+      .doc(groupId)
+      .get();
+  if (groupSnapshot.exists) {
+    String leaderId = groupSnapshot.get('leader');
+    isLeader = leaderId == currentUser.getCurrentUser.uid;
+  }
+
     // Check if the loan status is "PENDING"
-    if (loanApplication.status == LoanApplicationStatus.PENDING) {
+    if (loanApplication.status == LoanApplicationStatus.PENDING && isLeader) {
       //get an instance of the user from the database
       CurrentUser currentUser =
           Provider.of<CurrentUser>(context, listen: false);
       String? groupId = currentUser.getCurrentUser.groupId;
+
 
       // Get a reference to the loan application document in Firebase Firestore
       DocumentReference loanApplicationRef = FirebaseFirestore.instance
@@ -107,7 +130,7 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
               .collection('groups')
               .doc(groupId)
               .collection('user_transactions')
-              .doc(currentUser.getCurrentUser.uid);
+              .doc(loanApplication.id);
 
           // Get the user's current balance
           DocumentSnapshot userSnapshot = await transactionRef.get();
@@ -125,22 +148,22 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
           }
           //set the loan Amount in loan_payments collection
 //set the loan Amount in loan_payments collection
-          DocumentReference loanPaymentRef = FirebaseFirestore.instance
+          DocumentReference loanPaymentRef = FirebaseFirestore.instance.collection('groups').doc(groupId)
               .collection('loan_payments')
-              .doc(currentUser.getCurrentUser.uid);
+              .doc(loanApplication.id);
           await loanPaymentRef.set({'loan_amount': loanAmount});
 
 
-          //initilize new loan payment when the status of the loan is approved
+ //initilize new loan payment when the status of the loan is approved
 
           
-          // Step 1: Retrieve the interest rate and loan amount from the group's collection in Firebase
+ // Step 1: Retrieve the interest rate and loan amount from the group's collection in Firebase
   final groupRef = FirebaseFirestore.instance.collection('groups').doc(groupId);
   final groupData = await groupRef.get();
   final interestRate = groupData.get('interestRate');
 
   //get the loan amount from the loan applications collections 
-  final loanAmountRef = groupRef.collection('loan_applications').doc(currentUser.getCurrentUser.uid);
+  final loanAmountRef = groupRef.collection('loan_applications').doc(loanApplication.id);
   final loanAmountData = await loanAmountRef.get();
   final evaLoanAmount = loanAmountData.get('loanAmount');
 
@@ -151,20 +174,18 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
   final totalAmountDue = loanAmount + interest;
 
   // Step 4: Retrieve the user's payment history from the "loan_payments" sub-collection
-  final memberRef = groupRef.collection('loan_payments').doc(currentUser.getCurrentUser.uid);
-
+  final memberRef = groupRef.collection('loan_payments').doc(loanApplication.id);
  
   // Step 7: Update the "user_transactions" sub-collection with the remaining balance
-  await memberRef.update({'remaining_balance': totalAmountDue,
+  await memberRef.set({'remaining_balance': totalAmountDue,
   'loan_amount':loanAmount});
   
-           
-
           // Reload the loan applications list to reflect the updated status
           _loadLoanApplications();
           setState(() {
             _isLoading = false; // <-- set isLoading to false
           });
+    loanApprovedNotification();
         }
       } else {
         // Show an error message to the user
@@ -184,8 +205,30 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
                 ],
               );
             });
+            setState(() {
+            _isLoading = false; // <-- set isLoading to false
+          });
       }
-    } else {
+    } else if(!isLeader){
+      showDialog(
+          context: context,
+          builder: (BuildContext) {
+            return AlertDialog(
+              title: Text('Loan Evaluation'),
+              content: Text(
+                  'Only Group Admin Can Evaluate Loans'),
+              actions: <Widget>[
+                TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Text('OK'))
+                    
+              ],
+            );
+          });
+    }
+     else {
       showDialog(
           context: context,
           builder: (BuildContext) {
