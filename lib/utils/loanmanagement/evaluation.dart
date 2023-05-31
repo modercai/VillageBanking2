@@ -2,7 +2,6 @@
 
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:join_create_group_functionality/states/current_user.dart';
 import 'package:join_create_group_functionality/utils/get_loan_details.dart';
@@ -15,7 +14,6 @@ class LoanEvaluationPage extends StatefulWidget {
 
 class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
   List<LoanApplication>? _loanApplications;
-  bool _isEvaluated = false;
   bool _isLoading = false;
 
   @override
@@ -23,10 +21,17 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
     super.initState();
     _loadLoanApplications();
   }
-  
+
   //push notification for when the loan is approved
   void loanApprovedNotification() async {
-    await AwesomeNotifications().createNotification(content: NotificationContent(id: 1, channelKey: 'key1',title: 'Loan Evaluation',body: 'Your Loan has been approved succesfully check your balance to comfirm'),);
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+          id: 1,
+          channelKey: 'key1',
+          title: 'Loan Evaluation',
+          body:
+              'Your Loan has been approved succesfully check your balance to comfirm'),
+    );
   }
 
   void _loadLoanApplications() async {
@@ -58,23 +63,20 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
       _isLoading = true; // <-- set isLoading to true
     });
 
-     //get an instance of the user from the database
-  CurrentUser currentUser = Provider.of<CurrentUser>(context, listen: false);
-  String? groupId = currentUser.getCurrentUser.groupId;
-  final user = FirebaseAuth.instance.currentUser;
-  final userId = user!.uid;
+    //get an instance of the user from the database
+    CurrentUser currentUser = Provider.of<CurrentUser>(context, listen: false);
+    String? groupId = currentUser.getCurrentUser.groupId;
 
-
-  // Check if the current user is the leader of the group
-  bool isLeader = false;
-  DocumentSnapshot groupSnapshot = await FirebaseFirestore.instance
-      .collection('groups')
-      .doc(groupId)
-      .get();
-  if (groupSnapshot.exists) {
-    String leaderId = groupSnapshot.get('leader');
-    isLeader = leaderId == currentUser.getCurrentUser.uid;
-  }
+    // Check if the current user is the leader of the group
+    bool isLeader = false;
+    DocumentSnapshot groupSnapshot = await FirebaseFirestore.instance
+        .collection('groups')
+        .doc(groupId)
+        .get();
+    if (groupSnapshot.exists) {
+      String leaderId = groupSnapshot.get('leader');
+      isLeader = leaderId == currentUser.getCurrentUser.uid;
+    }
 
     // Check if the loan status is "PENDING"
     if (loanApplication.status == LoanApplicationStatus.PENDING && isLeader) {
@@ -82,7 +84,6 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
       CurrentUser currentUser =
           Provider.of<CurrentUser>(context, listen: false);
       String? groupId = currentUser.getCurrentUser.groupId;
-
 
       // Get a reference to the loan application document in Firebase Firestore
       DocumentReference loanApplicationRef = FirebaseFirestore.instance
@@ -116,10 +117,9 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
         // Disburse the loan amount if it was approved
 
         if (status == 'APPROVED') {
-
           setState(() {
-      _isLoading = false; // <-- set isLoading to true
-    });
+            _isLoading = false; // <-- set isLoading to true
+          });
           // Subtract the loan amount from the current balance to get the new balance
           double newTotalBalance = currentTotalBalance - loanAmount;
 
@@ -148,44 +148,50 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
           }
           //set the loan Amount in loan_payments collection
 //set the loan Amount in loan_payments collection
-          DocumentReference loanPaymentRef = FirebaseFirestore.instance.collection('groups').doc(groupId)
+          DocumentReference loanPaymentRef = FirebaseFirestore.instance
+              .collection('groups')
+              .doc(groupId)
               .collection('loan_payments')
               .doc(loanApplication.id);
           await loanPaymentRef.set({'loan_amount': loanAmount});
 
+          //initilize new loan payment when the status of the loan is approved
 
- //initilize new loan payment when the status of the loan is approved
+          // Step 1: Retrieve the interest rate and loan amount from the group's collection in Firebase
+          final groupRef =
+              FirebaseFirestore.instance.collection('groups').doc(groupId);
+          final groupData = await groupRef.get();
+          final interestRate = groupData.get('interestRate');
 
-          
- // Step 1: Retrieve the interest rate and loan amount from the group's collection in Firebase
-  final groupRef = FirebaseFirestore.instance.collection('groups').doc(groupId);
-  final groupData = await groupRef.get();
-  final interestRate = groupData.get('interestRate');
+          //get the loan amount from the loan applications collections
+          final loanAmountRef =
+              groupRef.collection('loan_applications').doc(loanApplication.id);
+          final loanAmountData = await loanAmountRef.get();
+          final evaLoanAmount = loanAmountData.get('loanAmount');
 
-  //get the loan amount from the loan applications collections 
-  final loanAmountRef = groupRef.collection('loan_applications').doc(loanApplication.id);
-  final loanAmountData = await loanAmountRef.get();
-  final evaLoanAmount = loanAmountData.get('loanAmount');
+          // Step 2: Calculate the interest on the loan using the interest rate and loan amount
+          final interest = evaLoanAmount * interestRate / 100;
 
-  // Step 2: Calculate the interest on the loan using the interest rate and loan amount
-  final interest = evaLoanAmount * interestRate/100; 
+          // Step 3: Calculate the total amount due by adding the interest to the loan amount
+          final totalAmountDue = loanAmount + interest;
 
-  // Step 3: Calculate the total amount due by adding the interest to the loan amount
-  final totalAmountDue = loanAmount + interest;
+          // Step 4: Retrieve the user's payment history from the "loan_payments" sub-collection
+          final memberRef =
+              groupRef.collection('loan_payments').doc(loanApplication.id);
 
-  // Step 4: Retrieve the user's payment history from the "loan_payments" sub-collection
-  final memberRef = groupRef.collection('loan_payments').doc(loanApplication.id);
- 
-  // Step 7: Update the "user_transactions" sub-collection with the remaining balance
-  await memberRef.set({'remaining_balance': totalAmountDue,
-  'loan_amount':loanAmount});
-  
+          // Step 7: Update the "user_transactions" sub-collection with the remaining balance
+          await memberRef.set({
+            'remaining_balance': totalAmountDue,
+            'loan_amount': loanAmount,
+            'actual_loan_amount': loanAmount
+          });
+
           // Reload the loan applications list to reflect the updated status
           _loadLoanApplications();
           setState(() {
             _isLoading = false; // <-- set isLoading to false
           });
-    loanApprovedNotification();
+          loanApprovedNotification();
         }
       } else {
         // Show an error message to the user
@@ -205,30 +211,27 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
                 ],
               );
             });
-            setState(() {
-            _isLoading = false; // <-- set isLoading to false
-          });
+        setState(() {
+          _isLoading = false; // <-- set isLoading to false
+        });
       }
-    } else if(!isLeader){
+    } else if (!isLeader) {
       showDialog(
           context: context,
           builder: (BuildContext) {
             return AlertDialog(
               title: Text('Loan Evaluation'),
-              content: Text(
-                  'Only Group Admin Can Evaluate Loans'),
+              content: Text('Only Group Admin Can Evaluate Loans'),
               actions: <Widget>[
                 TextButton(
                     onPressed: () {
                       Navigator.of(context).pop();
                     },
                     child: Text('OK'))
-                    
               ],
             );
           });
-    }
-     else {
+    } else {
       showDialog(
           context: context,
           builder: (BuildContext) {
@@ -313,7 +316,6 @@ class _LoanEvaluationPageState extends State<LoanEvaluationPage> {
       case LoanApplicationStatus.DECLINED:
         return Text('Declined');
     }
-    return null;
   }
 }
 

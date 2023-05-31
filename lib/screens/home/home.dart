@@ -35,6 +35,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final controller = PageController();
   final user = FirebaseAuth.instance.currentUser!;
+  
 
   double _getTransactionsTotal(
       List<QueryDocumentSnapshot<Map<String, dynamic>>> transactionsDocs) {
@@ -47,6 +48,8 @@ class _HomePageState extends State<HomePage> {
     }
     return total;
   }
+ 
+  final userDocs = FirebaseFirestore.instance.collection('users').doc();
 
   @override
   Widget build(BuildContext context) {

@@ -1,9 +1,8 @@
-// ignore_for_file: prefer_const_constructors
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:join_create_group_functionality/states/current_user.dart';
 import 'package:provider/provider.dart';
+import 'package:share/share.dart';
 
 class Members extends StatefulWidget {
   Members({Key? key}) : super(key: key);
@@ -14,13 +13,14 @@ class Members extends StatefulWidget {
 
 class _MembersState extends State<Members> {
   List<String> members = [];
+  String? groupId;
 
   @override
   void initState() {
     super.initState();
 
     CurrentUser currentUser = Provider.of<CurrentUser>(context, listen: false);
-    String? groupId = currentUser.getCurrentUser.groupId;
+    groupId = currentUser.getCurrentUser.groupId;
 
     // Retrieve the list of members from the group document
     FirebaseFirestore.instance
@@ -34,14 +34,34 @@ class _MembersState extends State<Members> {
     });
   }
 
+  void shareGroupId() {
+    if (groupId != null) {
+      Share.share('Join our group! Group ID: $groupId');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Group Members'),backgroundColor: Colors.deepPurple[200],),
+      appBar: AppBar(
+        title: Text('Group Members'),
+        backgroundColor: Colors.deepPurple[200],
+      ),
       backgroundColor: Colors.grey[200],
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Display the group ID here
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              'Group ID: $groupId',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
           Expanded(
             child: members.isNotEmpty
                 ? ListView.builder(
@@ -87,6 +107,11 @@ class _MembersState extends State<Members> {
                   ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: shareGroupId,
+        tooltip: 'Share Group ID',
+        child: Icon(Icons.share),
       ),
     );
   }

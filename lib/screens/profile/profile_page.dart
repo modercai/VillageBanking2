@@ -1,6 +1,9 @@
 // ignore_for_file: use_build_context_synchronously, prefer_const_constructors
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:join_create_group_functionality/screens/profile/cycle/cycle.dart';
+import 'package:join_create_group_functionality/screens/profile/helpsupport/help.dart';
 import 'package:join_create_group_functionality/screens/profile/members/members.dart';
 import 'package:join_create_group_functionality/screens/root/root.dart';
 import 'package:join_create_group_functionality/utils/loanmanagement/evaluation.dart';
@@ -20,13 +23,30 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   final user = FirebaseAuth.instance.currentUser!;
-  Loan loan = Loan(
-  id: 'ABC123',
-  borrowerName: 'John Doe',
-  loanAmount: 1000.0,
-  loanPurpose: 'Business investment',
-  remainingAmount: 800.0,
-);
+  String? username;
+
+  @override
+  void initState() {
+    super.initState();
+    retrieveUsername(); // Call the method to retrieve the username
+  }
+
+  void retrieveUsername() async {
+    try {
+      DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      if (userSnapshot.exists) {
+        setState(() {
+          username = userSnapshot['fullName'];
+        });
+      }
+    } catch (error) {
+      // Handle any potential errors here
+      print('Error retrieving username: $error');
+    }
+  }
 
 
   @override
@@ -46,7 +66,7 @@ class _SettingsPageState extends State<SettingsPage> {
             height: 40,
           ),
           Text(
-            'HI',
+            'Hi ${username ?? ''}',
             style: TextStyle(
               fontSize: 30,
             ),
@@ -73,7 +93,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   }
                 },
               ),
-              // ignore: prefer_const_constructors
               SizedBox(
                 height: 10,
               ),
@@ -91,20 +110,20 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               GestureDetector(
                 child: ProfileListItem(
-                    iconData: Icons.money, text: 'Loan Evaluation'),
+                    iconData: Icons.cyclone, text: 'Cycle Details'),
                 onTap: () {
                   Navigator.of(context).push(MaterialPageRoute(
-                      builder: (context) => LoanEvaluationPage()));
+                      builder: (context) => CountdownTimerWidget()));
                 },
               ),
               SizedBox(
                 height: 10,
               ),
-              ProfileListItem(iconData: Icons.settings, text: 'settings'),
-              SizedBox(
-                height: 10,
-              ),
-              ProfileListItem(iconData: Icons.help, text: 'help & support'),
+              GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(MaterialPageRoute(builder: (context) => HelpSupportPage()));
+                },
+                child: ProfileListItem(iconData: Icons.help, text: 'help & support')),
             ],
           ),
         ],

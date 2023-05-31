@@ -1,6 +1,5 @@
 // ignore_for_file: prefer_const_constructors, use_build_context_synchronously
 
-import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,7 +12,6 @@ import 'package:flutterwave_standard/models/responses/charge_response.dart';
 import 'package:join_create_group_functionality/services/database.dart';
 import 'package:join_create_group_functionality/states/current_user.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 
 class LoanPaymentForm extends StatefulWidget {
   @override
@@ -117,18 +115,7 @@ class _LoanPaymentFormState extends State<LoanPaymentForm> {
 
           await OurDatabase().calculateLoanRepayment(
               groupId!, userId, payment_amount, context);
-
-          // Add the loan payment document to the loan_payments collection
-         /* await FirebaseFirestore.instance
-              .collection('groups')
-              .doc(groupId)
-              .collection('loan_payments')
-              .doc(userId)
-              .set({
-            'payment_amount': payment_amount,
-            'payment_date': Timestamp.now(),
-          });*/
-
+              
           await FirebaseFirestore.instance
               .collection('groups')
               .doc(groupId)

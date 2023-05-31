@@ -1,5 +1,7 @@
 // ignore_for_file: must_be_immutable, subtype_of_sealed_class
 
+import 'dart:js';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
@@ -18,7 +20,7 @@ class MockDocumentReference extends Mock implements DocumentReference<Map<String
     final memberId = 'member_id_456';
     final interestRate = 0.1;
     final loanAmount = 1000;
-    final paidAmount = 500;
+    final paidAmount = 500.0;
     final expectedRemainingBalance = 600;
 
     final groupData = {
@@ -39,7 +41,7 @@ class MockDocumentReference extends Mock implements DocumentReference<Map<String
     when(mockGroupRef.collection('user_transactions').doc(memberId)).thenReturn(mockMemberRef);
 
     // Act
-    await OurDatabase().calculateLoanRepayment(groupId, memberId);
+    await OurDatabase().calculateLoanRepayment(groupId, memberId, paidAmount, context);
 
     // Assert
     verify(mockGroupRef.get()).called(1);

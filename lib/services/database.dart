@@ -1,6 +1,7 @@
 // ignore_for_file: empty_catches, prefer_const_constructors
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:join_create_group_functionality/models/users.dart';
 
@@ -116,47 +117,25 @@ class OurDatabase {
     return retVal;
   }
   
-Future<void> calculateLoanRepayment(String groupId, String memberId, double paymentAmount,context) async {
-  // Step 1: Retrieve the interest rate and loan amount from the group's collection in Firebase
-  final groupRef = FirebaseFirestore.instance.collection('groups').doc(groupId);
-  final groupData = await groupRef.get();
-  final interestRate = groupData.get('interestRate');
+Future<void> calculateLoanRepayment(String groupId, String memberId, double paymentAmount, context) async {
+  // Step 1: Retrieve the remaining balance and total amount due from the user's loan record
+  final memberRef = FirebaseFirestore.instance
+      .collection('groups')
+      .doc(groupId)
+      .collection('loan_payments')
+      .doc(memberId);
 
-  //get the loan amount from the loan applications collections 
-  final loanAmountRef = groupRef.collection('loan_payments').doc(memberId);
-  final loanAmountData = await loanAmountRef.get();
-  final loanAmount = loanAmountData.get('loan_amount');
+  final memberData = await memberRef.get();
+  final remainingBalance = memberData.get('remaining_balance');
+  final totalAmountDue = memberData.get('actual_loan_amount');
 
-  // Step 2: Calculate the interest on the loan using the interest rate and loan amount
-  final interest = loanAmount * interestRate/100; 
-
-  // Step 3: Calculate the total amount due by adding the interest to the loan amount
-  final totalAmountDue = loanAmount + interest;
-
-  // Step 4: Retrieve the user's payment history from the "loan_payments" sub-collection
-  final memberRef = groupRef.collection('loan_payments').doc(memberId);
-  final paymentHistory = await memberRef.collection('payments').get();
-
-  // Step 5: Calculate the amount paid by the user so far
-  double totalPaidAmount = 0;
-  for (final payment in paymentHistory.docs) {
-    totalPaidAmount += payment.get('payment_amount');
-  }
-  print('Total paid amount: $totalPaidAmount');
-  // Step 5: Retrieve the latest payment and calculate the amount paid by the user so far
-
-  // Step 6: Calculate the remaining balance by subtracting the total amount paid from the total amount due
-  final remainingBalance = totalAmountDue - totalPaidAmount;
-  print('Remaining balance: $remainingBalance');
-  print('PaymentAmount:$paymentAmount');
-
-  // Step 7: Check if the remaining balance is greater than zero
- if (remainingBalance <= 0) {
+  // Step 2: Check if the remaining balance is greater than zero
+  if (remainingBalance <= 0) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text("Error"),
-        content: Text("You cannot make any more payments until the remaining balance is replenished. Apply for another Loan Please"),
+        content: Text("You cannot make any more payments until the remaining balance is replenished. Apply for another Loan, please."),
         actions: <Widget>[
           TextButton(
             child: Text("OK"),
@@ -166,19 +145,39 @@ Future<void> calculateLoanRepayment(String groupId, String memberId, double paym
       ),
     );
     return;
-  }else{
-  // Step 7: Update the "user_transactions" sub-collection with the remaining balance
-  await memberRef.update({'remaining_balance': remainingBalance,'loan_amount':loanAmount},);
+  }
 
-  // Step 9: Add the new payment to the user's payment history
+  // Step 3: Calculate the new remaining balance after the payment
+  final newRemainingBalance = remainingBalance - paymentAmount;
+
+  // Step 4: Check if the payment amount is greater than the remaining balance
+  if (paymentAmount > remainingBalance) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Error"),
+        content: Text("The payment amount cannot exceed the remaining balance."),
+        actions: <Widget>[
+          TextButton(
+            child: Text("OK"),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      ),
+    );
+    return;
+  }
+
+  // Step 5: Update the remaining balance in the user's loan record
+  await memberRef.update({'remaining_balance': newRemainingBalance});
+
+  // Step 6: Add the new payment to the user's payment history
   await memberRef.collection('payments').add({
     'payment_amount': paymentAmount,
     'timestamp': DateTime.now(),
   });
-  }
-
-  
 }
+
 
 
 Future<void> updateGroupTotalOnceLoanApproved(DocumentReference groupRef, double loanAmount,String groupId) async {
@@ -236,7 +235,6 @@ Future<List<Map<String, dynamic>>> getPaymentHistory(String groupId,) async {
       }
       return paymentHistory;
     }
-
- 
+  
 }
 

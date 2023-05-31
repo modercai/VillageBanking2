@@ -1,11 +1,11 @@
-// ignore_for_file: prefer_const_constructors, sort_child_properties_last
+// ignore_for_file: prefer_const_constructors, sort_child_properties_last, use_build_context_synchronously
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:join_create_group_functionality/screens/home/home.dart';
 import 'package:join_create_group_functionality/states/current_user.dart';
 import 'package:provider/provider.dart';
-
 import '../../models/loanapplication.dart';
 
 class LoanApplicationPage extends StatefulWidget {
@@ -18,6 +18,26 @@ class _LoanApplicationScreenState extends State<LoanApplicationPage> {
   final _borrowerNameController = TextEditingController();
   final _loanAmountController = TextEditingController();
   final _loanPurposeController = TextEditingController();
+
+   Future<double> getRemainingBalance() async {
+    final user = FirebaseAuth.instance.currentUser!;
+    CurrentUser currentUser = Provider.of<CurrentUser>(context, listen: false);
+    String? groupId = currentUser.getCurrentUser.groupId;
+    final userId = user.uid;
+
+    final docSnapshot = await FirebaseFirestore.instance
+        .collection('groups')
+        .doc(groupId)
+        .collection('loan_payments')
+        .doc(userId)
+        .get();
+
+    if (docSnapshot.exists) {
+      return docSnapshot.data()!['remaining_balance'] ?? 0.0;
+    }
+
+    return 0.0;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,8 +88,34 @@ class _LoanApplicationScreenState extends State<LoanApplicationPage> {
                 height: 20,
               ),
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async{
                   if (_formKey.currentState!.validate()) {
+                    // Retrieve remaining balance
+                    final remainingBalance = await getRemainingBalance();
+
+                    // Check if remaining balance is less than zero
+                    if (remainingBalance > 0) {
+                      showDialog(
+  context: context,
+  builder: (BuildContext context) {
+    return AlertDialog(
+      title: Text('Message'),
+      content: Text('Cannot apply for a loan. Finish paying the current loan.'),
+      actions: [
+        ElevatedButton(
+          onPressed: () {
+            Navigator.of(context).pop(); // Close the dialog
+          },
+          child: Text('OK'),
+        ),
+      ],
+    );
+  },
+);
+
+                      return;
+                    }
+
                     // Create a new loan application object from the form data
                     final loanApplication = LoanApplication(
                       borrowerName: _borrowerNameController.text,
@@ -94,11 +140,6 @@ class _LoanApplicationScreenState extends State<LoanApplicationPage> {
                     _loanAmountController.clear();
                     _loanPurposeController.clear();
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Loan application submitted'),
-                      ),
-                    );
                   }
                 },
                 child: Text('Submit'),

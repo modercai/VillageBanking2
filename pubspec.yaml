@@ -42,7 +42,6 @@ dependencies:
   flutterwave_standard:
   http: ^0.13.5
   mockito:
-  flutter_datetime_picker:
   intl:
   get:
   flutterwave_payment:
@@ -55,6 +54,9 @@ dependencies:
   csv: ^5.0.2
   path_provider: ^2.0.15
   firebase_storage: ^11.1.2
+  flutter_datetime_picker: ^1.5.1
+  share: ^2.0.4
+  
 
 dev_dependencies:
   flutter_test:
